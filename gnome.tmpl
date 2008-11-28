@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <title>GNOME SVN Statistics</title>
+    </head>
+    <body>
+        <h1><TMPL_VAR date_generated></h1>
+        <h2>Authors</h2>
+        <ul>
+            <TMPL_LOOP Authors>
+                <li><TMPL_VAR author_name> <TMPL_VAR author_freq></li>
+            </TMPL_LOOP>
+        </ul>
+        <img src="<TMPL_VAR author_chart>"/>
+        <h2>Projects</h2>
+        <ul>
+            <TMPL_LOOP Projects>
+                <li><TMPL_VAR project_name> <TMPL_VAR project_freq></li>
+            </TMPL_LOOP>
+        </ul>
+        <img src="<TMPL_VAR project_chart>"/>
+        <h2>New Projects</h2>
+        <ul>
+            <TMPL_LOOP New>
+                <li><TMPL_VAR new_project_name> <TMPL_VAR new_project_author></li>
+            </TMPL_LOOP>
+        </ul>
+    </body>
+</html>
+

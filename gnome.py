@@ -11,6 +11,46 @@ import os.path
 import dateutil.parser
 import datetime
 
+import htmltmpl
+import pygooglechart
+
+class HtmlRenderer:
+    def __init__(self):
+        self._data = []
+
+    def add_data(self, **kwargs):
+        self._data.append(kwargs)
+
+    def render_html(self, limit=10):
+        return self._data[0:min(len(self._data)-1,limit)]
+
+    def render_chart(self, data_name, data_data, width=500,limit=20, bh=20):
+        limit = min(len(self._data)-1,limit)
+
+        chart = pygooglechart.StackedHorizontalBarChart(
+                width=width,
+                height=(limit*(bh+5))+10,
+                )
+
+        chart.set_bar_width(bh)
+        #chart.set_colours(['00ff00'])
+        chart.add_data(
+                [self._data[l][data_data] for l in range(limit)]
+        )
+        chart.set_axis_labels(
+                pygooglechart.Axis.LEFT,
+                [self._data[l][data_name] for l in range(limit)]
+        )
+        chart.set_axis_range(
+                pygooglechart.Axis.BOTTOM,
+                *chart.data_x_range()
+        )
+
+        return chart.get_url()
+
+    def render_text(self, limit=10):
+        print "%10s\t: %d" % (name, freq)
+
 class SVNCommitsParser(sgmllib.SGMLParser):
     """
     Parses svn-commits, looking for strings of the form
@@ -83,8 +123,9 @@ class Stats:
         if filename and os.path.exists(filename):
             self.f = open(filename, "r")
         else:
-            url = self.LIST_ARCHIVE_URL % datetime.date.today().strftime("%Y-%B")
-            self.f = urllib.urlopen(url)
+            filename = self.LIST_ARCHIVE_URL % datetime.date.today().strftime("%Y-%B")
+            self.f = urllib.urlopen(filename)
+        self.location = filename
 
         self.c = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES).cursor()
         self.c.execute('''CREATE TABLE commits 
@@ -93,7 +134,11 @@ class Stats:
 
         self.r = re.compile(self.RE_EXP)
 
-    def generate_stats(self):
+        self.pr = HtmlRenderer()
+        self.ar = HtmlRenderer()
+        self.nr = HtmlRenderer()
+
+    def collect_stats(self):
         data = self.f.read()
         self.f.close()
 
@@ -117,35 +162,32 @@ class Stats:
 
             except ValueError:
                 fail.append(msg)
-                
-        print "PARSING PAGE:\nMatched %d/%d commit messages" % parser.get_stats()
 
-    def get_authors(self, num=10):
-        print "\nAUTHORS:"
+        hits, total = parser.get_stats()
+        #print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.location,hits,total)
+
+    def generate_stats(self, num=5):
+        #Authors
         self.c.execute('''
                 SELECT author, COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-7 days")
                 GROUP BY author 
-                ORDER BY c DESC 
-                LIMIT %s''' % num)
+                ORDER BY c DESC''')
         for name, freq in self.c:
-            print "%10s\t: %d" % (name, freq)
+            self.ar.add_data(author_name=name, author_freq=freq)
 
-    def get_active_projects(self, num=10):
-        print "\nACTIVE PROJECTS:"
+        #Projects
         self.c.execute('''
                 SELECT project, COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-7 days") 
                 GROUP BY project 
-                ORDER BY c DESC 
-                LIMIT %s''' % num)
+                ORDER BY c DESC''')
         for name, freq in self.c:
-            print "%20s\t: %d" % (name, freq)
+            self.pr.add_data(project_name=name, project_freq=freq)
 
-    def get_new_projects(self, num=5):
-        print "\nNEW PROJECTS:"
+        #New Projects
         self.c.execute('''
                 SELECT project, author 
                 FROM commits 
@@ -153,7 +195,27 @@ class Stats:
                 AND d >= datetime("now","-7 days") 
                 GROUP BY project''' % num)
         for name, author in self.c:
-            print "%s by %s" % (name, author)
+            self.nr.add_data(new_project_name=name, new_project_author=author)
+
+    def render_html(self, name="gnome.tmpl"):
+        template = htmltmpl.TemplateManager().prepare(name)
+        tproc = htmltmpl.TemplateProcessor()
+
+        tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
+
+        #Projects
+        tproc.set("Projects", self.pr.render_html())
+        tproc.set("project_chart", self.pr.render_chart("project_name","project_freq"))
+
+        #Authors
+        tproc.set("Authors", self.ar.render_html())
+        tproc.set("author_chart", self.ar.render_chart("author_name","author_freq"))
+
+        #Projects
+        tproc.set("New", self.nr.render_html())
+
+        # Print the processed template.
+        print tproc.process(template)
 
 if __name__ == "__main__":
     import sys
@@ -164,8 +226,8 @@ if __name__ == "__main__":
         filename = None
 
     s = Stats(filename)
+    s.collect_stats()
     s.generate_stats()
-    s.get_authors()
-    s.get_active_projects()
-    s.get_new_projects()
+    s.render_html()
+
 
