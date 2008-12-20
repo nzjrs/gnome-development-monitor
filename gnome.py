@@ -34,13 +34,19 @@ class HtmlRenderer:
 
         chart.set_bar_width(bh)
         #chart.set_colours(['00ff00'])
+
         chart.add_data(
                 [self._data[l][data_data] for l in range(limit)]
         )
+
+        #the labels get applied in reverse for some reason
+        labels = [self._data[l][data_name] for l in range(limit)]
+        labels.reverse()
         chart.set_axis_labels(
                 pygooglechart.Axis.LEFT,
-                [self._data[l][data_name] for l in range(limit)]
+                labels
         )
+
         chart.set_axis_range(
                 pygooglechart.Axis.BOTTOM,
                 *chart.data_x_range()
