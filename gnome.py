@@ -197,37 +197,44 @@ class Stats:
         for name, author in self.c:
             self.nr.add_data(new_project_name=name, new_project_author=author)
 
-    def render_html(self, name="gnome.tmpl"):
-        template = htmltmpl.TemplateManager().prepare(name)
-        tproc = htmltmpl.TemplateProcessor()
+    def render(self, format, name="gnome.tmpl"):
+        if format == "html":
 
-        tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
+            template = htmltmpl.TemplateManager().prepare(name)
+            tproc = htmltmpl.TemplateProcessor()
 
-        #Projects
-        tproc.set("Projects", self.pr.render_html())
-        tproc.set("project_chart", self.pr.render_chart("project_name","project_freq"))
+            tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
 
-        #Authors
-        tproc.set("Authors", self.ar.render_html())
-        tproc.set("author_chart", self.ar.render_chart("author_name","author_freq"))
+            #Projects
+            tproc.set("Projects", self.pr.render_html())
+            tproc.set("project_chart", self.pr.render_chart("project_name","project_freq"))
 
-        #Projects
-        tproc.set("New", self.nr.render_html())
+            #Authors
+            tproc.set("Authors", self.ar.render_html())
+            tproc.set("author_chart", self.ar.render_chart("author_name","author_freq"))
 
-        # Print the processed template.
-        print tproc.process(template)
+            #Projects
+            tproc.set("New", self.nr.render_html())
+
+            # Print the processed template.
+            print tproc.process(template)
+
+        else:
+            raise Exception("Format %s not supported" % format)
 
 if __name__ == "__main__":
-    import sys
+    import optparse
 
-    try:
-        filename = sys.argv[1]
-    except IndexError:
-        filename = None
+    parser = optparse.OptionParser()
+    parser.add_option("-f", "--format",
+                  type="choice", choices=("html", "text"), default="html",
+                  help="output format [default: %default]")
+    parser.add_option("-s", "--source",
+                  help="read statistics from FILE [default: read from web]", metavar="FILE")
+    options, args = parser.parse_args()
 
-    s = Stats(filename)
+    s = Stats(options.source)
     s.collect_stats()
     s.generate_stats()
-    s.render_html()
-
+    s.render(options.format)
 
