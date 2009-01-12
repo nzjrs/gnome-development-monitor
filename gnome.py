@@ -161,6 +161,7 @@ class Stats:
             #break up the message and parse
             try:
                 proj, rev, branch, message = n.groups()
+                print "po" in message.split("/")
                 self.c.execute('''INSERT INTO commits 
                             (project, author, rev, branch, message, d) VALUES
                             (?, ?, ?, ?, ?, ?)''',
@@ -173,7 +174,11 @@ class Stats:
         #print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.location,hits,total)
 
     def generate_stats(self, num=5):
+        #Do in 2 steps because my SQL foo is not strong enough to
+        #get the list of projects/authors per author/project
+
         #Authors
+        i = []
         self.c.execute('''
                 SELECT author, COUNT(*) as c
                 FROM commits 
@@ -181,9 +186,21 @@ class Stats:
                 GROUP BY author 
                 ORDER BY c DESC''')
         for name, freq in self.c:
-            self.ar.add_data(author_name=name, author_freq=freq)
+            i.append([name, freq, ""])
+
+        for j in i:
+            self.c.execute('''
+                    SELECT project
+                    FROM commits 
+                    WHERE author = "%s" 
+                    AND d >= datetime("now","-7 days") 
+                    GROUP BY project''' % j[0])
+            j[2] = ", ".join([p for p, in self.c])
+        for name,freq, projects in i:
+            self.ar.add_data(author_name=name, author_freq=freq, author_projects=projects)
 
         #Projects
+        i = []
         self.c.execute('''
                 SELECT project, COUNT(*) as c
                 FROM commits 
@@ -191,7 +208,19 @@ class Stats:
                 GROUP BY project 
                 ORDER BY c DESC''')
         for name, freq in self.c:
-            self.pr.add_data(project_name=name, project_freq=freq)
+            i.append([name, freq, ""])
+
+        for j in i:
+            self.c.execute('''
+                    SELECT author
+                    FROM commits 
+                    WHERE project = "%s" 
+                    AND d >= datetime("now","-7 days") 
+                    GROUP BY author''' % j[0])
+            j[2] = ", ".join([p for p, in self.c])
+
+        for name,freq, projects in i:
+            self.pr.add_data(project_name=name, project_freq=freq, project_authors=projects)
 
         #New Projects
         self.c.execute('''
