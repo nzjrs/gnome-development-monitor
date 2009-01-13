@@ -243,7 +243,7 @@ class Stats:
         hits, total = parser.get_stats()
         #print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.location,hits,total)
 
-    def generate_stats(self, num=5):
+    def generate_stats(self, days=7):
         #Do in 2 steps because my SQL foo is not strong enough to
         #get the list of projects/authors per author/project
 
@@ -252,9 +252,9 @@ class Stats:
         self.c.execute('''
                 SELECT author, COUNT(*) as c
                 FROM commits 
-                WHERE d >= datetime("now","-7 days")
+                WHERE d >= datetime("now","-%d days")
                 GROUP BY author 
-                ORDER BY c DESC''')
+                ORDER BY c DESC''' % days)
         for name, freq in self.c:
             i.append([name, freq, ""])
 
@@ -263,8 +263,8 @@ class Stats:
                     SELECT project
                     FROM commits 
                     WHERE author = "%s" 
-                    AND d >= datetime("now","-7 days") 
-                    GROUP BY project''' % j[0])
+                    AND d >= datetime("now","-%d days") 
+                    GROUP BY project''' % (j[0], days))
             j[2] = ", ".join([p for p, in self.c])
         for name,freq, projects in i:
             self.rend.add_data(
@@ -276,9 +276,9 @@ class Stats:
         self.c.execute('''
                 SELECT project, COUNT(*) as c
                 FROM commits 
-                WHERE d >= datetime("now","-7 days") 
+                WHERE d >= datetime("now","-%d days") 
                 GROUP BY project 
-                ORDER BY c DESC''')
+                ORDER BY c DESC''' % days)
         for name, freq in self.c:
             i.append([name, freq, ""])
 
@@ -287,8 +287,8 @@ class Stats:
                     SELECT author
                     FROM commits 
                     WHERE project = "%s" 
-                    AND d >= datetime("now","-7 days") 
-                    GROUP BY author''' % j[0])
+                    AND d >= datetime("now","-%d days") 
+                    GROUP BY author''' % (j[0], days))
             j[2] = ", ".join([p for p, in self.c])
 
         for name,freq, projects in i:
@@ -300,9 +300,9 @@ class Stats:
         self.c.execute('''
                 SELECT project, author 
                 FROM commits 
-                WHERE rev < %s 
-                AND d >= datetime("now","-7 days") 
-                GROUP BY project''' % num)
+                WHERE rev < 5 
+                AND d >= datetime("now","-%d days") 
+                GROUP BY project''' % days)
         for name, author in self.c:
             self.rend.add_data(
                 self.rend.SECTION_NEW,
@@ -320,10 +320,14 @@ if __name__ == "__main__":
                   help="output format [default: %default]")
     parser.add_option("-s", "--source",
                   help="read statistics from FILE [default: read from web]", metavar="FILE")
+    parser.add_option("-d", "--days",
+                  type="int", default=7,
+                  help="the number of days to consider for statistics")
+
     options, args = parser.parse_args()
 
     s = Stats(format=options.format,filename=options.source)
     s.collect_stats()
-    s.generate_stats()
+    s.generate_stats(days=options.days)
     s.render()
 
