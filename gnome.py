@@ -14,18 +14,37 @@ import datetime
 import htmltmpl
 import pygooglechart
 
-class HtmlRenderer:
+class _Renderer:
+
+    SECTION_PROJECT = "projects"
+    SECTION_AUTHOR = "authors"
+    SECTION_NEW = "new"
+
     def __init__(self):
-        self._data = []
+        self._data = {}
 
-    def add_data(self, **kwargs):
-        self._data.append(kwargs)
+    def add_data(self, section, **kwargs):
+        try:
+            self._data[section].append(kwargs)
+        except KeyError:
+            self._data[section] = [kwargs]
 
-    def render_html(self, limit=10):
-        return self._data[0:min(len(self._data)-1,limit)]
+    def get_data(self, section, limit):
+        try:
+            return self._data[section][0:min(len(self._data[section])-1,limit)]
+        except KeyError:
+            return []
 
-    def render_chart(self, data_name, data_data, width=500,limit=20, bh=20):
-        limit = min(len(self._data)-1,limit)
+class HtmlRenderer(_Renderer):
+
+    def __init__(self, template_name="gnome.tmpl"):
+        _Renderer.__init__(self)
+        self.template = htmltmpl.TemplateManager().prepare(template_name)
+        self.tproc = htmltmpl.TemplateProcessor()
+        self.tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
+
+    def _get_chart_url(self, section, data_name, data_data, width=500,limit=20, bh=20):
+        limit = min(len(self._data[section])-1,limit)
 
         chart = pygooglechart.StackedHorizontalBarChart(
                 width=width,
@@ -36,11 +55,11 @@ class HtmlRenderer:
         #chart.set_colours(['00ff00'])
 
         chart.add_data(
-                [self._data[l][data_data] for l in range(limit)]
+                [self._data[section][l][data_data] for l in range(limit)]
         )
 
         #the labels get applied in reverse for some reason
-        labels = [self._data[l][data_name] for l in range(limit)]
+        labels = [self._data[section][l][data_name] for l in range(limit)]
         labels.reverse()
         chart.set_axis_labels(
                 pygooglechart.Axis.LEFT,
@@ -54,8 +73,56 @@ class HtmlRenderer:
 
         return chart.get_url()
 
-    def render_text(self, limit=10):
-        print "%10s\t: %d" % (name, freq)
+    def _render_template(self, limit):
+
+        #Projects
+        self.tproc.set("Projects", self.get_data(self.SECTION_PROJECT, limit))
+        self.tproc.set("project_chart", self._get_chart_url(self.SECTION_PROJECT,"project_name","project_freq"))
+
+        #Authors
+        self.tproc.set("Authors", self.get_data(self.SECTION_AUTHOR, limit))
+        self.tproc.set("author_chart", self._get_chart_url(self.SECTION_AUTHOR,"author_name","author_freq"))
+
+        #Projects
+        self.tproc.set("New", self.get_data(self.SECTION_NEW, limit))
+
+        return self.tproc.process(self.template)
+
+    def render(self, limit=10):
+        # Print the processed template.
+        print self._render_template(limit)
+
+class GtkWebkitRenderer(HtmlRenderer):
+
+    def _destroy(self, window, browser):
+        import gtk
+
+        browser.destroy()
+        window.destroy()
+        gtk.main_quit()
+
+    def render(self, limit=10):
+        import gtk
+        import webkit
+
+        w = gtk.Window()
+        browser = webkit.WebView()
+        sw = gtk.ScrolledWindow()
+
+        sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
+        sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
+        sw.add(browser)
+
+        w.add(sw)
+        w.set_default_size(800, 800)
+        w.connect('destroy', self._destroy, browser)
+
+        browser.load_string(
+                    self._render_template(limit), 
+                    "text/html", "iso-8859-15", "commits:")
+
+        w.show_all()
+        gtk.main()
 
 class SVNCommitsParser(sgmllib.SGMLParser):
     """
@@ -125,7 +192,7 @@ class Stats:
     RE_EXP = "^([\w+\-]+) r([0-9]+) - (?:.*)(trunk|branches|tags)([a-zA-Z0-9/\:\.\-]*)"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
-    def __init__(self, filename=None):
+    def __init__(self, format, filename=None):
         if filename and os.path.exists(filename):
             self.f = open(filename, "r")
         else:
@@ -140,9 +207,12 @@ class Stats:
 
         self.r = re.compile(self.RE_EXP)
 
-        self.pr = HtmlRenderer()
-        self.ar = HtmlRenderer()
-        self.nr = HtmlRenderer()
+        if format == "html":
+            self.rend = HtmlRenderer()
+        elif format == "gtk":
+            self.rend = GtkWebkitRenderer() 
+        else:
+            raise Exception("Format %s not supported" % format)
 
     def collect_stats(self):
         data = self.f.read()
@@ -161,7 +231,7 @@ class Stats:
             #break up the message and parse
             try:
                 proj, rev, branch, message = n.groups()
-                print "po" in message.split("/")
+                #print "po" in message.split("/")
                 self.c.execute('''INSERT INTO commits 
                             (project, author, rev, branch, message, d) VALUES
                             (?, ?, ?, ?, ?, ?)''',
@@ -197,7 +267,9 @@ class Stats:
                     GROUP BY project''' % j[0])
             j[2] = ", ".join([p for p, in self.c])
         for name,freq, projects in i:
-            self.ar.add_data(author_name=name, author_freq=freq, author_projects=projects)
+            self.rend.add_data(
+                    self.rend.SECTION_AUTHOR,
+                    author_name=name, author_freq=freq, author_projects=projects)
 
         #Projects
         i = []
@@ -220,7 +292,9 @@ class Stats:
             j[2] = ", ".join([p for p, in self.c])
 
         for name,freq, projects in i:
-            self.pr.add_data(project_name=name, project_freq=freq, project_authors=projects)
+            self.rend.add_data(
+                    self.rend.SECTION_PROJECT,
+                    project_name=name, project_freq=freq, project_authors=projects)
 
         #New Projects
         self.c.execute('''
@@ -230,46 +304,26 @@ class Stats:
                 AND d >= datetime("now","-7 days") 
                 GROUP BY project''' % num)
         for name, author in self.c:
-            self.nr.add_data(new_project_name=name, new_project_author=author)
+            self.rend.add_data(
+                self.rend.SECTION_NEW,
+                new_project_name=name, new_project_author=author)
 
-    def render(self, format, name="gnome.tmpl"):
-        if format == "html":
-
-            template = htmltmpl.TemplateManager().prepare(name)
-            tproc = htmltmpl.TemplateProcessor()
-
-            tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
-
-            #Projects
-            tproc.set("Projects", self.pr.render_html())
-            tproc.set("project_chart", self.pr.render_chart("project_name","project_freq"))
-
-            #Authors
-            tproc.set("Authors", self.ar.render_html())
-            tproc.set("author_chart", self.ar.render_chart("author_name","author_freq"))
-
-            #Projects
-            tproc.set("New", self.nr.render_html())
-
-            # Print the processed template.
-            print tproc.process(template)
-
-        else:
-            raise Exception("Format %s not supported" % format)
+    def render(self):
+        self.rend.render()
 
 if __name__ == "__main__":
     import optparse
 
     parser = optparse.OptionParser()
     parser.add_option("-f", "--format",
-                  type="choice", choices=("html", "text"), default="html",
+                  type="choice", choices=("gtk", "html"), default="gtk",
                   help="output format [default: %default]")
     parser.add_option("-s", "--source",
                   help="read statistics from FILE [default: read from web]", metavar="FILE")
     options, args = parser.parse_args()
 
-    s = Stats(options.source)
+    s = Stats(format=options.format,filename=options.source)
     s.collect_stats()
     s.generate_stats()
-    s.render(options.format)
+    s.render()
 
