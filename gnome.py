@@ -160,13 +160,10 @@ class Stats:
     RE_EXP = "^([\w+\-]+) r([0-9]+) - (?:.*)(trunk|branches|tags)([a-zA-Z0-9/\:\.\-]*)"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
-    def __init__(self, filename=None):
-        if filename and os.path.exists(filename):
-            self.f = open(filename, "r")
-        else:
-            filename = self.LIST_ARCHIVE_URL % datetime.date.today().strftime("%Y-%B")
-            self.f = urllib.urlopen(filename)
-        self.location = filename
+    def __init__(self, filename, ignore_translation, days):
+        self.ignore_translation = ignore_translation
+        self.days = days
+        self.filename = filename
 
         self.c = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES).cursor()
         self.c.execute('''CREATE TABLE commits 
@@ -176,7 +173,13 @@ class Stats:
         self.r = re.compile(self.RE_EXP)
         self.rend = HtmlRenderer()
 
-    def collect_stats(self, ignore_translation):
+    def collect_stats(self):
+        if self.filename and os.path.exists(self.filename):
+            self.f = open(self.filename, "r")
+        else:
+            self.filename = self.LIST_ARCHIVE_URL % datetime.date.today().strftime("%Y-%B")
+            self.f = urllib.urlopen(self.filename)
+
         data = self.f.read()
         self.f.close()
 
@@ -193,7 +196,7 @@ class Stats:
             #break up the message and parse
             try:
                 proj, rev, branch, message = n.groups()
-                if ignore_translation and "po" in message.split("/"):
+                if self.ignore_translation and "po" in message.split("/"):
                     pass
                 else:
                     self.c.execute('''INSERT INTO commits 
@@ -205,9 +208,9 @@ class Stats:
                 fail.append(msg)
 
         hits, total = parser.get_stats()
-        #print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.location,hits,total)
+        #print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.filename,hits,total)
 
-    def generate_stats(self, days=7):
+    def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
         #get the list of projects/authors per author/project
 
@@ -218,7 +221,7 @@ class Stats:
                 FROM commits 
                 WHERE d >= datetime("now","-%d days")
                 GROUP BY author 
-                ORDER BY c DESC''' % days)
+                ORDER BY c DESC''' % self.days)
         for name, freq in self.c:
             i.append([name, freq, ""])
 
@@ -228,7 +231,7 @@ class Stats:
                     FROM commits 
                     WHERE author = "%s" 
                     AND d >= datetime("now","-%d days") 
-                    GROUP BY project''' % (j[0], days))
+                    GROUP BY project''' % (j[0], self.days))
             j[2] = ", ".join([p for p, in self.c])
         for name,freq, projects in i:
             self.rend.add_data(
@@ -242,7 +245,7 @@ class Stats:
                 FROM commits 
                 WHERE d >= datetime("now","-%d days") 
                 GROUP BY project 
-                ORDER BY c DESC''' % days)
+                ORDER BY c DESC''' % self.days)
         for name, freq in self.c:
             i.append([name, freq, ""])
 
@@ -252,7 +255,7 @@ class Stats:
                     FROM commits 
                     WHERE project = "%s" 
                     AND d >= datetime("now","-%d days") 
-                    GROUP BY author''' % (j[0], days))
+                    GROUP BY author''' % (j[0], self.days))
             j[2] = ", ".join([p for p, in self.c])
 
         for name,freq, projects in i:
@@ -266,7 +269,7 @@ class Stats:
                 FROM commits 
                 WHERE rev < 5 
                 AND d >= datetime("now","-%d days") 
-                GROUP BY project''' % days)
+                GROUP BY project''' % self.days)
         for name, author in self.c:
             self.rend.add_data(
                 self.rend.SECTION_NEW,
@@ -333,11 +336,11 @@ if __name__ == "__main__":
 
     options, args = parser.parse_args()
 
-    ui = UI()
-    ui.main()
+    #ui = UI()
+    #ui.main()
 
-    #s = Stats(filename=options.source)
-    #s.collect_stats(ignore_translation=options.include_translation)
-    #s.generate_stats(days=options.days)
-    #print s.render()
+    s = Stats(filename=options.source, ignore_translation=options.include_translation, days=options.days)
+    s.collect_stats()
+    s.generate_stats()
+    print s.render()
 
