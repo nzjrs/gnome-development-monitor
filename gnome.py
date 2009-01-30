@@ -14,6 +14,12 @@ import datetime
 import htmltmpl
 import pygooglechart
 
+import gtk
+import gtk.glade
+import webkit
+
+gtk.gdk.threads_init()
+
 class _Renderer:
 
     SECTION_PROJECT = "projects"
@@ -95,17 +101,11 @@ class HtmlRenderer(_Renderer):
 class GtkWebkitRenderer(HtmlRenderer):
 
     def _destroy(self, window, browser):
-        import gtk
-
         browser.destroy()
         window.destroy()
         gtk.main_quit()
 
     def render(self, limit=10):
-        import gtk
-        import webkit
-
-        gtk.gdk.threads_init()
 
         w = gtk.Window()
         browser = webkit.WebView()
@@ -316,6 +316,49 @@ class Stats:
     def render(self):
         self.rend.render()
 
+class UI:
+    def __init__(self):
+        widgets = gtk.glade.XML("ui.glade", "window1")
+        widgets.signal_autoconnect(self)
+
+        tv = widgets.get_widget("treeview1")
+        sw = widgets.get_widget("scrolledwindow1")
+
+        self.webkit = webkit.WebView()
+        self.webkit.open("http://planet.gnome.org")
+        sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
+        sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
+        sw.add(self.webkit)
+
+        self.model = gtk.ListStore(str)
+
+        self.model.append(("123",))
+
+        tv.set_model(self.model)
+
+        tv.append_column(
+                gtk.TreeViewColumn("Project", gtk.CellRendererText(), text=0)
+        )
+
+        w = widgets.get_widget("window1")
+        w.set_default_size(1200, 800)
+        w.show_all()
+
+    def on_commit_btn_clicked(self, *args):
+        print "commit"
+
+    def on_changelog_btn_clicked(self, *args):
+        print "cl"
+
+    def on_news_btn_clicked(self, *args):
+        print "news"
+
+    def on_summary_btn_clicked(self, *args):
+        print "summary"
+
+    def main(self):
+        gtk.main()
+
 if __name__ == "__main__":
     import optparse
 
@@ -335,8 +378,11 @@ if __name__ == "__main__":
 
     options, args = parser.parse_args()
 
-    s = Stats(format=options.format,filename=options.source)
-    s.collect_stats(ignore_translation=options.include_translation)
-    s.generate_stats(days=options.days)
-    s.render()
+    ui = UI()
+    ui.main()
+
+    #s = Stats(format=options.format,filename=options.source)
+    #s.collect_stats(ignore_translation=options.include_translation)
+    #s.generate_stats(days=options.days)
+    #s.render()
 

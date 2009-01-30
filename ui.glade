@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sat Jan 31 00:00:29 2009 -->
+<!--Generated with glade3 3.4.5 on Sat Jan 31 11:44:23 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="window1">
     <child>
@@ -14,6 +14,9 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </widget>
+              <packing>
+                <property name="expand">False</property>
+              </packing>
             </child>
             <child>
               <widget class="GtkScrolledWindow" id="scrolledwindow1">
