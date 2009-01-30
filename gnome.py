@@ -105,6 +105,8 @@ class GtkWebkitRenderer(HtmlRenderer):
         import gtk
         import webkit
 
+        gtk.gdk.threads_init()
+
         w = gtk.Window()
         browser = webkit.WebView()
         sw = gtk.ScrolledWindow()
@@ -114,7 +116,7 @@ class GtkWebkitRenderer(HtmlRenderer):
         sw.add(browser)
 
         w.add(sw)
-        w.set_default_size(800, 800)
+        w.set_default_size(1200, 800)
         w.connect('destroy', self._destroy, browser)
 
         browser.load_string(
@@ -214,7 +216,7 @@ class Stats:
         else:
             raise Exception("Format %s not supported" % format)
 
-    def collect_stats(self):
+    def collect_stats(self, ignore_translation):
         data = self.f.read()
         self.f.close()
 
@@ -231,11 +233,14 @@ class Stats:
             #break up the message and parse
             try:
                 proj, rev, branch, message = n.groups()
-                #print "po" in message.split("/")
-                self.c.execute('''INSERT INTO commits 
-                            (project, author, rev, branch, message, d) VALUES
-                            (?, ?, ?, ?, ?, ?)''',
-                            (proj, auth, int(rev), branch, message, date))
+                print rev
+                if ignore_translation and "po" in message.split("/"):
+                    pass
+                else:
+                    self.c.execute('''INSERT INTO commits 
+                                (project, author, rev, branch, message, d) VALUES
+                                (?, ?, ?, ?, ?, ?)''',
+                                (proj, auth, int(rev), branch, message, date))
 
             except ValueError:
                 fail.append(msg)
@@ -323,11 +328,15 @@ if __name__ == "__main__":
     parser.add_option("-d", "--days",
                   type="int", default=7,
                   help="the number of days to consider for statistics")
+    parser.add_option("-t", "--include-translation",
+                    action="store_false", default=True,
+                    help="include translation commits (po) in statistics")
+
 
     options, args = parser.parse_args()
 
     s = Stats(format=options.format,filename=options.source)
-    s.collect_stats()
+    s.collect_stats(ignore_translation=options.include_translation)
     s.generate_stats(days=options.days)
     s.render()
 
