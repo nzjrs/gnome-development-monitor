@@ -10,10 +10,12 @@ import re
 import os.path
 import dateutil.parser
 import datetime
+import threading
 
 import htmltmpl
 import pygooglechart
 
+import gobject
 import gtk
 import gtk.glade
 import webkit
@@ -165,7 +167,7 @@ class Stats:
         self.days = days
         self.filename = filename
 
-        self.c = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES).cursor()
+        self.c = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False).cursor()
         self.c.execute('''CREATE TABLE commits 
                         (project text, author text, rev int, 
                         branch text, message text, d timestamp)''')
@@ -278,8 +280,14 @@ class Stats:
     def render(self):
         return self.rend.render()
 
-class UI:
-    def __init__(self):
+class UI(threading.Thread):
+
+    BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn")
+
+    def __init__(self, stats):
+        threading.Thread.__init__(self)
+        self.stats = stats
+
         widgets = gtk.glade.XML("ui.glade", "window1")
         widgets.signal_autoconnect(self)
 
@@ -318,7 +326,17 @@ class UI:
     def on_summary_btn_clicked(self, *args):
         print "summary"
 
+    def collect_stats_finished(self):
+        #self.stats.render()
+        print "fin"
+
+    def run(self):
+        self.stats.collect_stats()
+        self.stats.generate_stats()
+        gobject.idle_add(self.collect_stats_finished)
+
     def main(self):
+        self.start()
         gtk.main()
 
 if __name__ == "__main__":
@@ -336,11 +354,8 @@ if __name__ == "__main__":
 
     options, args = parser.parse_args()
 
-    #ui = UI()
-    #ui.main()
-
     s = Stats(filename=options.source, ignore_translation=options.include_translation, days=options.days)
-    s.collect_stats()
-    s.generate_stats()
-    print s.render()
+    ui = UI(s)
+    ui.main()
+
 
