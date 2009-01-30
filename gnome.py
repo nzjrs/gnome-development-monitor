@@ -20,31 +20,14 @@ import webkit
 
 gtk.gdk.threads_init()
 
-class _Renderer:
+class HtmlRenderer:
 
     SECTION_PROJECT = "projects"
     SECTION_AUTHOR = "authors"
     SECTION_NEW = "new"
 
-    def __init__(self):
-        self._data = {}
-
-    def add_data(self, section, **kwargs):
-        try:
-            self._data[section].append(kwargs)
-        except KeyError:
-            self._data[section] = [kwargs]
-
-    def get_data(self, section, limit):
-        try:
-            return self._data[section][0:min(len(self._data[section])-1,limit)]
-        except KeyError:
-            return []
-
-class HtmlRenderer(_Renderer):
-
     def __init__(self, template_name="gnome.tmpl"):
-        _Renderer.__init__(self)
+        self._data = {}
         self.template = htmltmpl.TemplateManager().prepare(template_name)
         self.tproc = htmltmpl.TemplateProcessor()
         self.tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
@@ -94,37 +77,20 @@ class HtmlRenderer(_Renderer):
 
         return self.tproc.process(self.template)
 
+    def add_data(self, section, **kwargs):
+        try:
+            self._data[section].append(kwargs)
+        except KeyError:
+            self._data[section] = [kwargs]
+
+    def get_data(self, section, limit):
+        try:
+            return self._data[section][0:min(len(self._data[section])-1,limit)]
+        except KeyError:
+            return []
+
     def render(self, limit=10):
-        # Print the processed template.
-        print self._render_template(limit)
-
-class GtkWebkitRenderer(HtmlRenderer):
-
-    def _destroy(self, window, browser):
-        browser.destroy()
-        window.destroy()
-        gtk.main_quit()
-
-    def render(self, limit=10):
-
-        w = gtk.Window()
-        browser = webkit.WebView()
-        sw = gtk.ScrolledWindow()
-
-        sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
-        sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
-        sw.add(browser)
-
-        w.add(sw)
-        w.set_default_size(1200, 800)
-        w.connect('destroy', self._destroy, browser)
-
-        browser.load_string(
-                    self._render_template(limit), 
-                    "text/html", "iso-8859-15", "commits:")
-
-        w.show_all()
-        gtk.main()
+        return self._render_template(limit)
 
 class SVNCommitsParser(sgmllib.SGMLParser):
     """
@@ -194,7 +160,7 @@ class Stats:
     RE_EXP = "^([\w+\-]+) r([0-9]+) - (?:.*)(trunk|branches|tags)([a-zA-Z0-9/\:\.\-]*)"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
-    def __init__(self, format, filename=None):
+    def __init__(self, filename=None):
         if filename and os.path.exists(filename):
             self.f = open(filename, "r")
         else:
@@ -208,13 +174,7 @@ class Stats:
                         branch text, message text, d timestamp)''')
 
         self.r = re.compile(self.RE_EXP)
-
-        if format == "html":
-            self.rend = HtmlRenderer()
-        elif format == "gtk":
-            self.rend = GtkWebkitRenderer() 
-        else:
-            raise Exception("Format %s not supported" % format)
+        self.rend = HtmlRenderer()
 
     def collect_stats(self, ignore_translation):
         data = self.f.read()
@@ -233,7 +193,6 @@ class Stats:
             #break up the message and parse
             try:
                 proj, rev, branch, message = n.groups()
-                print rev
                 if ignore_translation and "po" in message.split("/"):
                     pass
                 else:
@@ -314,7 +273,7 @@ class Stats:
                 new_project_name=name, new_project_author=author)
 
     def render(self):
-        self.rend.render()
+        return self.rend.render()
 
 class UI:
     def __init__(self):
@@ -363,9 +322,6 @@ if __name__ == "__main__":
     import optparse
 
     parser = optparse.OptionParser()
-    parser.add_option("-f", "--format",
-                  type="choice", choices=("gtk", "html"), default="gtk",
-                  help="output format [default: %default]")
     parser.add_option("-s", "--source",
                   help="read statistics from FILE [default: read from web]", metavar="FILE")
     parser.add_option("-d", "--days",
@@ -375,14 +331,13 @@ if __name__ == "__main__":
                     action="store_false", default=True,
                     help="include translation commits (po) in statistics")
 
-
     options, args = parser.parse_args()
 
     ui = UI()
     ui.main()
 
-    #s = Stats(format=options.format,filename=options.source)
+    #s = Stats(filename=options.source)
     #s.collect_stats(ignore_translation=options.include_translation)
     #s.generate_stats(days=options.days)
-    #s.render()
+    #print s.render()
 
