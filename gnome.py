@@ -211,7 +211,7 @@ class Stats:
                 fail.append(msg)
 
         hits, total = parser.get_stats()
-        #print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.filename,hits,total)
+        print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.filename,hits,total)
 
     def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
@@ -350,7 +350,6 @@ class UI(threading.Thread):
 
     def on_commit_btn_clicked(self, *args):
         if self.proj:
-            print self.LOG_STR % self._get_details_dict()
             self.webkit.open(self.LOG_STR % self._get_details_dict())
 
     def on_changelog_btn_clicked(self, *args):
