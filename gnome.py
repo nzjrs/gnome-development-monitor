@@ -331,7 +331,10 @@ class UI(threading.Thread):
         print "news"
 
     def on_summary_btn_clicked(self, *args):
-        print "summary"
+        self.webkit.load_string(
+                        self.stats.get_summary(), 
+                        "text/html", "iso-8859-15", "commits:"
+        )
 
     def collect_stats_finished(self):
         for p,ma,mi in self.stats.get_projects():
