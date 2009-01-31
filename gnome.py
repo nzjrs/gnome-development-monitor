@@ -167,6 +167,7 @@ class Stats:
         self.days = days
         self.filename = filename
 
+        self.projects = []
         self.c = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False).cursor()
         self.c.execute('''CREATE TABLE commits 
                         (project text, author text, rev int, 
@@ -277,8 +278,20 @@ class Stats:
                 self.rend.SECTION_NEW,
                 new_project_name=name, new_project_author=author)
 
-    def render(self):
+        #Record project min and max revision
+        self.c.execute('''
+                SELECT project, MAX(rev), MIN(rev)
+                FROM commits 
+                WHERE d >= datetime("now","-%d days") 
+                GROUP BY project 
+                ORDER BY project DESC''' % self.days)
+        self.projects = [(p,ma,mi) for p, ma, mi  in self.c]
+
+    def get_summary(self):
         return self.rend.render()
+
+    def get_projects(self):
+        return self.projects
 
 class UI(threading.Thread):
 
@@ -291,24 +304,18 @@ class UI(threading.Thread):
         widgets = gtk.glade.XML("ui.glade", "window1")
         widgets.signal_autoconnect(self)
 
-        tv = widgets.get_widget("treeview1")
         sw = widgets.get_widget("scrolledwindow1")
-
         self.webkit = webkit.WebView()
         self.webkit.open("http://planet.gnome.org")
         sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
         sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
         sw.add(self.webkit)
 
-        self.model = gtk.ListStore(str)
-
-        self.model.append(("123",))
-
-        tv.set_model(self.model)
-
-        tv.append_column(
-                gtk.TreeViewColumn("Project", gtk.CellRendererText(), text=0)
-        )
+        self.model = gtk.ListStore(str,int,int)
+        self.tv = widgets.get_widget("treeview1")
+        self.tv.append_column(gtk.TreeViewColumn("Project", gtk.CellRendererText(), text=0))
+        self.tv.append_column(gtk.TreeViewColumn("Max", gtk.CellRendererText(), text=1))
+        self.tv.append_column(gtk.TreeViewColumn("Min", gtk.CellRendererText(), text=2))
 
         w = widgets.get_widget("window1")
         w.set_default_size(1200, 800)
@@ -327,8 +334,9 @@ class UI(threading.Thread):
         print "summary"
 
     def collect_stats_finished(self):
-        #self.stats.render()
-        print "fin"
+        for p,ma,mi in self.stats.get_projects():
+            self.model.append((p,ma,mi))
+        self.tv.set_model(self.model)
 
     def run(self):
         self.stats.collect_stats()
