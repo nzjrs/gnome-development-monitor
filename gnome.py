@@ -284,7 +284,7 @@ class Stats:
                 FROM commits 
                 WHERE d >= datetime("now","-%d days") 
                 GROUP BY project 
-                ORDER BY project DESC''' % self.days)
+                ORDER BY project ASC''' % self.days)
         self.projects = [(p,ma,mi) for p, ma, mi  in self.c]
 
     def get_summary(self):
@@ -296,15 +296,23 @@ class Stats:
 class UI(threading.Thread):
 
     BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn")
+    CHANGELOG_STR = "http://svn.gnome.org/viewvc/%(project)s/trunk/ChangeLog?r1=%(r1)s&r2=%(r2)s"
+    NEWS_STR = "http://svn.gnome.org/viewvc/%(project)s/trunk/NEWS?r1=%(r1)s&r2=%(r2)s"
+    LOG_STR = "http://svn.gnome.org/viewvc/%(project)s/?view=query&querysort=date&date=explicit&mindate=%(last_date)s&maxdate=%(today_date)s&limit_changes=100"
 
     def __init__(self, stats):
         threading.Thread.__init__(self)
         self.stats = stats
 
-        widgets = gtk.glade.XML("ui.glade", "window1")
-        widgets.signal_autoconnect(self)
+        #selected project (and revisions)
+        self.proj = None
+        self.min = None
+        self.max = None
 
-        sw = widgets.get_widget("scrolledwindow1")
+        self.widgets = gtk.glade.XML("ui.glade", "window1")
+        self.widgets.signal_autoconnect(self)
+
+        sw = self.widgets.get_widget("scrolledwindow1")
         self.webkit = webkit.WebView()
         self.webkit.open("http://planet.gnome.org")
         sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
@@ -312,23 +320,46 @@ class UI(threading.Thread):
         sw.add(self.webkit)
 
         self.model = gtk.ListStore(str,int,int)
-        self.tv = widgets.get_widget("treeview1")
+        self.tv = self.widgets.get_widget("treeview1")
         self.tv.append_column(gtk.TreeViewColumn("Project", gtk.CellRendererText(), text=0))
         self.tv.append_column(gtk.TreeViewColumn("Max", gtk.CellRendererText(), text=1))
         self.tv.append_column(gtk.TreeViewColumn("Min", gtk.CellRendererText(), text=2))
 
-        w = widgets.get_widget("window1")
-        w.set_default_size(1200, 800)
+        self.tv.get_selection().connect("changed", self.on_selection_changed)
+
+        w = self.widgets.get_widget("window1")
         w.show_all()
 
+    def _get_details_dict(self):
+        today = datetime.date.today()
+        old = today-datetime.timedelta(days=self.stats.days)
+        return {
+            "project":self.proj,
+            "r1":self.max,
+            "r2":self.min,
+            "today_date":today.strftime("%Y-%m-%d"),
+            "last_date":old.strftime("%Y-%m-%d"),
+        }
+
+    def on_selection_changed(self, selection):
+        model,iter_ = selection.get_selected()
+        if model and iter_:
+            self.proj = model.get_value(iter_, 0)
+            self.max = model.get_value(iter_, 1)
+            self.min = model.get_value(iter_, 2)
+
     def on_commit_btn_clicked(self, *args):
-        print "commit"
+        if self.proj:
+            print self.LOG_STR % self._get_details_dict()
+            self.webkit.open(self.LOG_STR % self._get_details_dict())
 
     def on_changelog_btn_clicked(self, *args):
-        print "cl"
+        if self.proj:
+            self.webkit.open(self.CHANGELOG_STR % self._get_details_dict())
 
     def on_news_btn_clicked(self, *args):
-        print "news"
+        if self.proj:
+            self.webkit.open(self.NEWS_STR % self._get_details_dict())
 
     def on_summary_btn_clicked(self, *args):
         self.webkit.load_string(
@@ -340,6 +371,8 @@ class UI(threading.Thread):
         for p,ma,mi in self.stats.get_projects():
             self.model.append((p,ma,mi))
         self.tv.set_model(self.model)
+        for i in self.BTNS:
+            self.widgets.get_widget(i).set_sensitive(True)
 
     def run(self):
         self.stats.collect_stats()
