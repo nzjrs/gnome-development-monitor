@@ -333,10 +333,17 @@ class UI(threading.Thread):
     def _get_details_dict(self):
         today = datetime.date.today()
         old = today-datetime.timedelta(days=self.stats.days)
+
+        #so we always see a diff
+        if self.min == self.max:
+            min_ = self.max -1
+        else:
+            min_ = self.min
+
         return {
             "project":self.proj,
             "r1":self.max,
-            "r2":self.min,
+            "r2":min_,
             "today_date":today.strftime("%Y-%m-%d"),
             "last_date":old.strftime("%Y-%m-%d"),
         }
