@@ -178,40 +178,58 @@ class Stats:
 
     def collect_stats(self):
         if self.filename and os.path.exists(self.filename):
-            self.f = open(self.filename, "r")
+            files = [
+                (open(self.filename, "r"), self.filename)
+            ]
         else:
-            self.filename = self.LIST_ARCHIVE_URL % datetime.date.today().strftime("%Y-%B")
-            self.f = urllib.urlopen(self.filename)
+            today = datetime.date.today()
+            last = today - datetime.timedelta(days=self.days)
+            files = []
 
-        data = self.f.read()
-        self.f.close()
+            filename = self.LIST_ARCHIVE_URL % today.strftime("%Y-%B")
+            files.append(
+                (urllib.urlopen(filename), filename)
+            )
 
-        parser = SVNCommitsParser()
-        parser.parse(data)
+            #if we are in the first n days of this month, and we require > n days of data
+            #then also get the last month
+            if today.month != last.month:
+                filename = self.LIST_ARCHIVE_URL % last.strftime("%Y-%B")
+                files.append(
+                    (urllib.urlopen(filename), filename)
+                )
 
-        fail = []
-        for msg, auth, date in parser.updates:
-            n = self.r.match(msg)
-            if not n:
-                fail.append(msg)
-                continue
 
-            #break up the message and parse
-            try:
-                proj, rev, branch, message = n.groups()
-                if self.ignore_translation and "po" in message.split("/"):
-                    pass
-                else:
-                    self.c.execute('''INSERT INTO commits 
-                                (project, author, rev, branch, message, d) VALUES
-                                (?, ?, ?, ?, ?, ?)''',
-                                (proj, auth, int(rev), branch, message, date))
+        for f, filename in files:
+            data = f.read()
+            f.close()
 
-            except ValueError:
-                fail.append(msg)
+            parser = SVNCommitsParser()
+            parser.parse(data)
 
-        hits, total = parser.get_stats()
-        print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (self.filename,hits,total)
+            fail = []
+            for msg, auth, date in parser.updates:
+                n = self.r.match(msg)
+                if not n:
+                    fail.append(msg)
+                    continue
+
+                #break up the message and parse
+                try:
+                    proj, rev, branch, message = n.groups()
+                    if self.ignore_translation and "po" in message.split("/"):
+                        pass
+                    else:
+                        self.c.execute('''INSERT INTO commits 
+                                    (project, author, rev, branch, message, d) VALUES
+                                    (?, ?, ?, ?, ?, ?)''',
+                                    (proj, auth, int(rev), branch, message, date))
+
+                except ValueError:
+                    fail.append(msg)
+
+            hits, total = parser.get_stats()
+            print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (filename,hits,total)
 
     def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
