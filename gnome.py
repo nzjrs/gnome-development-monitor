@@ -391,6 +391,9 @@ class UI(threading.Thread):
                         "text/html", "iso-8859-15", "commits:"
         )
 
+    def on_window1_destroy(self, *args):
+        gtk.main_quit()
+
     def collect_stats_finished(self):
         for p,ma,mi in self.stats.get_projects():
             self.model.append((p,ma,mi))
