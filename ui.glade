@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Feb  1 18:09:32 2009 -->
+<!--Generated with glade3 3.4.5 on Thu Feb  5 10:15:15 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="window1">
     <property name="default_width">1200</property>
@@ -101,6 +101,20 @@
               <packing>
                 <property name="position">3</property>
                 <property name="secondary">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkButton" id="new_patches_btn">
+                <property name="visible">True</property>
+                <property name="sensitive">False</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="label" translatable="yes">New Patches</property>
+                <property name="response_id">0</property>
+                <signal name="clicked" handler="on_new_patches_btn_clicked"/>
+              </widget>
+              <packing>
+                <property name="position">4</property>
               </packing>
             </child>
           </widget>

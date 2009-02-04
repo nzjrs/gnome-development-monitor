@@ -313,10 +313,11 @@ class Stats:
 
 class UI(threading.Thread):
 
-    BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn")
+    BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn", "new_patches_btn")
     CHANGELOG_STR = "http://svn.gnome.org/viewvc/%(project)s/trunk/ChangeLog?r1=%(r1)s&r2=%(r2)s"
     NEWS_STR = "http://svn.gnome.org/viewvc/%(project)s/trunk/NEWS?r1=%(r1)s&r2=%(r2)s"
     LOG_STR = "http://svn.gnome.org/viewvc/%(project)s/?view=query&querysort=date&date=explicit&mindate=%(last_date)s&maxdate=%(today_date)s&limit_changes=100"
+    NEW_PATCHES_STR = "http://bugzilla.gnome.org/reports/patch-report.cgi?product=%(project)s&patch-status=&max_days=%(days)s"
 
     def __init__(self, stats):
         threading.Thread.__init__(self)
@@ -364,6 +365,7 @@ class UI(threading.Thread):
             "r2":min_,
             "today_date":today.strftime("%Y-%m-%d"),
             "last_date":old.strftime("%Y-%m-%d"),
+            "days":self.stats.days,
         }
 
     def on_selection_changed(self, selection):
@@ -390,6 +392,11 @@ class UI(threading.Thread):
                         self.stats.get_summary(), 
                         "text/html", "iso-8859-15", "commits:"
         )
+
+    def on_new_patches_btn_clicked(self, *args):
+        if self.proj:
+            self.webkit.open(self.NEW_PATCHES_STR % self._get_details_dict())
+
 
     def on_window1_destroy(self, *args):
         gtk.main_quit()
