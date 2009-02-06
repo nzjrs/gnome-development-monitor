@@ -340,9 +340,9 @@ class UI(threading.Thread):
 
         self.model = gtk.ListStore(str,int,int)
         self.tv = self.widgets.get_widget("treeview1")
-        self.tv.append_column(gtk.TreeViewColumn("Project", gtk.CellRendererText(), text=0))
-        self.tv.append_column(gtk.TreeViewColumn("Max", gtk.CellRendererText(), text=1))
-        self.tv.append_column(gtk.TreeViewColumn("Min", gtk.CellRendererText(), text=2))
+        self.tv.append_column(gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0))
+        self.tv.append_column(gtk.TreeViewColumn("Max Rev", gtk.CellRendererText(), text=1))
+        self.tv.append_column(gtk.TreeViewColumn("Min Rev", gtk.CellRendererText(), text=2))
 
         self.tv.get_selection().connect("changed", self.on_selection_changed)
 
