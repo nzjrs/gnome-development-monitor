@@ -16,8 +16,10 @@ By analysis of SVN commit records (for the last N days) it is able to generate a
 
 Usage
 ------
-You need to have `pygtk`, `python-htmltmpl` and `python-webkitgtk` installed. If the program crashes, freezes, or misbehaves then please upgrade your Webkit version.
+You need to have `pygtk`, `python-htmltmpl` and `python-webkitgtk` installed. If the program crashes, freezes, or misbehaves then please upgrade your Webkit version. Usage is as follows;
 
+    Usage: gnome.py [options]
+    
     Options:
       -h, --help            show this help message and exit
       -s FILE, --source=FILE
