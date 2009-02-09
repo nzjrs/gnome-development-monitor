@@ -1,5 +1,6 @@
 GNOME Development Monitor
 =========================
+![Screenshot](screenshot.jpg)
 Introduction
 ------------
 GNOME Development Monitor is a simple graphical tool to follow the the development activity of projects hosted in GNOME SVN.
