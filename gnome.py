@@ -331,9 +331,9 @@ class UI(threading.Thread):
         self.widgets = gtk.glade.XML("ui.glade", "window1")
         self.widgets.signal_autoconnect(self)
 
+        self.sb = self.widgets.get_widget("statusbar1")
         sw = self.widgets.get_widget("scrolledwindow1")
         self.webkit = webkit.WebView()
-        self.webkit.open("http://planet.gnome.org")
         sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
         sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
         sw.add(self.webkit)
@@ -345,6 +345,8 @@ class UI(threading.Thread):
         self.tv.append_column(gtk.TreeViewColumn("Min Rev", gtk.CellRendererText(), text=2))
 
         self.tv.get_selection().connect("changed", self.on_selection_changed)
+
+        self._open_url("http://planet.gnome.org")
 
         w = self.widgets.get_widget("window1")
         w.show_all()
@@ -368,6 +370,13 @@ class UI(threading.Thread):
             "days":self.stats.days,
         }
 
+    def _open_url(self, url):
+        self.sb.push(
+                self.sb.get_context_id("url"),
+                url
+        )
+        self.webkit.open(url)
+
     def on_selection_changed(self, selection):
         model,iter_ = selection.get_selected()
         if model and iter_:
@@ -377,15 +386,15 @@ class UI(threading.Thread):
 
     def on_commit_btn_clicked(self, *args):
         if self.proj:
-            self.webkit.open(self.LOG_STR % self._get_details_dict())
+            self._open_url(self.LOG_STR % self._get_details_dict())
 
     def on_changelog_btn_clicked(self, *args):
         if self.proj:
-            self.webkit.open(self.CHANGELOG_STR % self._get_details_dict())
+            self._open_url(self.CHANGELOG_STR % self._get_details_dict())
 
     def on_news_btn_clicked(self, *args):
         if self.proj:
-            self.webkit.open(self.NEWS_STR % self._get_details_dict())
+            self._open_url(self.NEWS_STR % self._get_details_dict())
 
     def on_summary_btn_clicked(self, *args):
         self.webkit.load_string(
@@ -395,7 +404,7 @@ class UI(threading.Thread):
 
     def on_new_patches_btn_clicked(self, *args):
         if self.proj:
-            self.webkit.open(self.NEW_PATCHES_STR % self._get_details_dict())
+            self._open_url(self.NEW_PATCHES_STR % self._get_details_dict())
 
 
     def on_window1_destroy(self, *args):
