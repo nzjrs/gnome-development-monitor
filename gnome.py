@@ -109,7 +109,6 @@ class SVNCommitsParser(sgmllib.SGMLParser):
         self.inside_a_element = 0
         self.inside_li_element = 0
         self.inside_strong_element = 0
-        self.misses = 0
 
     def start_li(self, attributes):
         self.inside_li_element = 1
@@ -147,15 +146,14 @@ class SVNCommitsParser(sgmllib.SGMLParser):
             self.author = data
 
             if not self.msg:
-                self.misses += 1
+                pass
             elif self.msg in ("Home", "News", "Projects", "Art", "Support", "Development", "Community", "List archives", "Thread", "Author"):
                 pass
             else:
                 self.updates.append( (self.msg, self.author, self.date) )
 
-    def get_stats(self):
-        l = len(self.updates)
-        return l,l+self.misses
+    def get_num_parsed_lines(self):
+        return len(self.updates)
 
 class Stats:
 
@@ -228,8 +226,9 @@ class Stats:
                 except ValueError:
                     fail.append(msg)
 
-            hits, total = parser.get_stats()
-            print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (filename,hits,total)
+            total = parser.get_num_parsed_lines()
+            failed = len(fail)
+            print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (filename,total-failed,total)
 
     def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
