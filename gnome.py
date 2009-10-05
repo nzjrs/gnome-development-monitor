@@ -157,7 +157,8 @@ class SVNCommitsParser(sgmllib.SGMLParser):
 
 class Stats:
 
-    RE_EXP = "^([\w+\-]+) r([0-9]+) - (?:.*)(trunk|branches|tags)([a-zA-Z0-9/\:\.\-]*)"
+    #RE_EXP = "^([\w+\-]+) r([0-9]+) - (?:.*)(trunk|branches|tags)([a-zA-Z0-9/\:\.\-]*)"
+    RE_EXP = "^\[([\w+\-/]+)\] (.*)"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
     def __init__(self, filename, ignore_translation, days):
@@ -166,7 +167,9 @@ class Stats:
         self.filename = filename
 
         self.projects = []
-        self.c = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False).cursor()
+        conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+        conn.text_factory = lambda bin: bin.decode("utf8", "replace")
+        self.c = conn.cursor()
         self.c.execute('''CREATE TABLE commits 
                         (project text, author text, rev int, 
                         branch text, message text, d timestamp)''')
@@ -214,8 +217,18 @@ class Stats:
 
                 #break up the message and parse
                 try:
-                    proj, rev, branch, message = n.groups()
-                    if self.ignore_translation and "po" in message.split("/"):
+                    #proj, rev, branch, message = n.groups()
+                    proj, message = n.groups()
+                    try:
+                        proj,branch = proj.split("/")
+                    except ValueError:
+                        branch = "master"
+
+                    rev = 1
+
+                    print type(proj), type(auth), type(rev), type(branch), type(message), type(date)
+
+                    if False: #self.ignore_translation and "po" in message.split("/"):
                         pass
                     else:
                         self.c.execute('''INSERT INTO commits 
