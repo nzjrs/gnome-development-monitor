@@ -157,17 +157,16 @@ class SVNCommitsParser(sgmllib.SGMLParser):
 
 class Stats:
 
-    #RE_EXP = "^([\w+\-]+) r([0-9]+) - (?:.*)(trunk|branches|tags)([a-zA-Z0-9/\:\.\-]*)"
     RE_EXP = "^\[([\w+\-/]+)\] (.*)"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
-    def __init__(self, filename, ignore_translation, days):
-        self.ignore_translation = ignore_translation
+    def __init__(self, filename, days):
         self.days = days
         self.filename = filename
 
         self.projects = []
         conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+        #don't explode on unknown unicode
         conn.text_factory = lambda bin: bin.decode("utf8", "replace")
         self.c = conn.cursor()
         self.c.execute('''CREATE TABLE commits 
@@ -217,24 +216,17 @@ class Stats:
 
                 #break up the message and parse
                 try:
-                    #proj, rev, branch, message = n.groups()
+                    rev = 1
                     proj, message = n.groups()
                     try:
                         proj,branch = proj.split("/")
                     except ValueError:
                         branch = "master"
 
-                    rev = 1
-
-                    print type(proj), type(auth), type(rev), type(branch), type(message), type(date)
-
-                    if False: #self.ignore_translation and "po" in message.split("/"):
-                        pass
-                    else:
-                        self.c.execute('''INSERT INTO commits 
-                                    (project, author, rev, branch, message, d) VALUES
-                                    (?, ?, ?, ?, ?, ?)''',
-                                    (proj, auth, int(rev), branch, message, date))
+                    self.c.execute('''INSERT INTO commits 
+                                (project, author, rev, branch, message, d) VALUES
+                                (?, ?, ?, ?, ?, ?)''',
+                                (proj, auth, rev, branch, message, date))
 
                 except ValueError:
                     fail.append(msg)
@@ -447,13 +439,10 @@ if __name__ == "__main__":
     parser.add_option("-d", "--days",
                   type="int", default=7,
                   help="the number of days to consider for statistics")
-    parser.add_option("-t", "--include-translation",
-                    action="store_false", default=True,
-                    help="include translation commits (po) in statistics")
 
     options, args = parser.parse_args()
 
-    s = Stats(filename=options.source, ignore_translation=options.include_translation, days=options.days)
+    s = Stats(filename=options.source, days=options.days)
     ui = UI(s)
     ui.main()
 
