@@ -318,10 +318,10 @@ class Stats:
 class UI(threading.Thread):
 
     BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn", "new_patches_btn")
-    CHANGELOG_STR = "http://svn.gnome.org/viewvc/%(project)s/trunk/ChangeLog?r1=%(r1)s&r2=%(r2)s"
-    NEWS_STR = "http://svn.gnome.org/viewvc/%(project)s/trunk/NEWS?r1=%(r1)s&r2=%(r2)s"
-    LOG_STR = "http://svn.gnome.org/viewvc/%(project)s/?view=query&querysort=date&date=explicit&mindate=%(last_date)s&maxdate=%(today_date)s&limit_changes=100"
-    NEW_PATCHES_STR = "http://bugzilla.gnome.org/reports/patch-report.cgi?product=%(project)s&patch-status=&max_days=%(days)s"
+    CHANGELOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
+    NEWS_STR = "http://git.gnome.org/cgit/%(project)s/log/NEWS"
+    LOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
+    NEW_PATCHES_STR = "https://bugzilla.gnome.org/page.cgi?id=patchreport.html&product=%(escaped_project)s&patch-status=&max_days=%(days)s"
 
     def __init__(self, stats):
         threading.Thread.__init__(self)
@@ -367,6 +367,7 @@ class UI(threading.Thread):
 
         return {
             "project":self.proj,
+            "escaped_project":urllib.quote(self.proj),
             "r1":self.max,
             "r2":min_,
             "today_date":today.strftime("%Y-%m-%d"),
