@@ -258,7 +258,7 @@ class Stats:
                     AND d >= datetime("now","-%d days") 
                     GROUP BY project''' % (j[0], self.days))
             j[2] = ", ".join([p for p, in self.c])
-        for name,freq, projects in i:
+        for name, freq, projects in i:
             self.rend.add_data(
                     self.rend.SECTION_AUTHOR,
                     author_name=name, author_freq=freq, author_projects=projects)
@@ -273,6 +273,7 @@ class Stats:
                 ORDER BY c DESC''' % self.days)
         for name, freq in self.c:
             i.append([name, freq, ""])
+            self.projects.append((name,freq))
 
         for j in i:
             self.c.execute('''
@@ -299,15 +300,6 @@ class Stats:
             self.rend.add_data(
                 self.rend.SECTION_NEW,
                 new_project_name=name, new_project_author=author)
-
-        #Record project min and max revision
-        self.c.execute('''
-                SELECT project, MAX(rev), MIN(rev)
-                FROM commits 
-                WHERE d >= datetime("now","-%d days") 
-                GROUP BY project 
-                ORDER BY project ASC''' % self.days)
-        self.projects = [(p,ma,mi) for p, ma, mi  in self.c]
 
     def get_summary(self):
         return self.rend.render()
@@ -342,11 +334,10 @@ class UI(threading.Thread):
         sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
         sw.add(self.webkit)
 
-        self.model = gtk.ListStore(str,int,int)
+        self.model = gtk.ListStore(str,int)
         self.tv = self.widgets.get_widget("treeview1")
         self.tv.append_column(gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0))
-        self.tv.append_column(gtk.TreeViewColumn("Max Rev", gtk.CellRendererText(), text=1))
-        self.tv.append_column(gtk.TreeViewColumn("Min Rev", gtk.CellRendererText(), text=2))
+        self.tv.append_column(gtk.TreeViewColumn("Commits", gtk.CellRendererText(), text=1))
 
         self.tv.get_selection().connect("changed", self.on_selection_changed)
 
@@ -416,8 +407,8 @@ class UI(threading.Thread):
         gtk.main_quit()
 
     def collect_stats_finished(self):
-        for p,ma,mi in self.stats.get_projects():
-            self.model.append((p,ma,mi))
+        for p,commits in self.stats.get_projects():
+            self.model.append((p,commits))
         self.tv.set_model(self.model)
         for i in self.BTNS:
             self.widgets.get_widget(i).set_sensitive(True)
