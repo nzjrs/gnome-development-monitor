@@ -26,7 +26,6 @@ class HtmlRenderer:
 
     SECTION_PROJECT = "projects"
     SECTION_AUTHOR = "authors"
-    SECTION_NEW = "new"
 
     def __init__(self, template_name="gnome.tmpl"):
         self._data = {}
@@ -73,9 +72,6 @@ class HtmlRenderer:
         #Authors
         self.tproc.set("Authors", self.get_data(self.SECTION_AUTHOR, limit))
         self.tproc.set("author_chart", self._get_chart_url(self.SECTION_AUTHOR,"author_name","author_freq"))
-
-        #Projects
-        self.tproc.set("New", self.get_data(self.SECTION_NEW, limit))
 
         return self.tproc.process(self.template)
 
@@ -288,18 +284,6 @@ class Stats:
             self.rend.add_data(
                     self.rend.SECTION_PROJECT,
                     project_name=name, project_freq=freq, project_authors=projects)
-
-        #New Projects
-        self.c.execute('''
-                SELECT project, author 
-                FROM commits 
-                WHERE rev < 5 
-                AND d >= datetime("now","-%d days") 
-                GROUP BY project''' % self.days)
-        for name, author in self.c:
-            self.rend.add_data(
-                self.rend.SECTION_NEW,
-                new_project_name=name, new_project_author=author)
 
     def get_summary(self):
         return self.rend.render()
