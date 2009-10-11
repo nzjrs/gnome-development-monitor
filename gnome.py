@@ -22,6 +22,37 @@ import webkit
 
 gtk.gdk.threads_init()
 
+def humanize_date_difference(now, otherdate=None, offset=None):
+    if otherdate:
+        dt = otherdate - now
+        offset = dt.seconds + (dt.days * 60*60*24)
+    if offset:
+        delta_s = offset % 60
+        offset /= 60
+        delta_m = offset % 60
+        offset /= 60
+        delta_h = offset % 24
+        offset /= 24
+        delta_d = offset
+    else:
+        raise ValueError("Must supply otherdate or offset (from now)")
+
+    if delta_d > 1:
+        if delta_d > 6:
+            date = now + datetime.timedelta(days=-delta_d, hours=-delta_h, minutes=-delta_m)
+            return date.strftime('%A, %Y %B %m, %H:%I')
+        else:
+            wday = now + datetime.timedelta(days=-delta_d)
+            return wday.strftime('%A')
+    if delta_d == 1:
+        return "Yesterday"
+    if delta_h > 0:
+        return "%dh%dm ago" % (delta_h, delta_m)
+    if delta_m > 0:
+        return "%dm%ds ago" % (delta_m, delta_s)
+    else:
+        return "%ds ago" % delta_s
+
 class HtmlRenderer:
 
     SECTION_PROJECT = "projects"
@@ -262,14 +293,14 @@ class Stats:
         #Projects
         i = []
         self.c.execute('''
-                SELECT project, COUNT(*) as c
+                SELECT project, d, COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-%d days") 
                 GROUP BY project 
-                ORDER BY c DESC''' % self.days)
-        for name, freq in self.c:
+                ORDER BY d DESC''' % self.days)
+        for name, d, freq in self.c:
             i.append([name, freq, ""])
-            self.projects.append((name,freq))
+            self.projects.append((name, d, freq))
 
         for j in i:
             self.c.execute('''
@@ -318,10 +349,15 @@ class UI(threading.Thread):
         sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
         sw.add(self.webkit)
 
-        self.model = gtk.ListStore(str,int)
+        self.model = gtk.ListStore(str,int, object)
         self.tv = self.widgets.get_widget("treeview1")
         self.tv.append_column(gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0))
         self.tv.append_column(gtk.TreeViewColumn("Commits", gtk.CellRendererText(), text=1))
+
+        rend = gtk.CellRendererText()
+        date = gtk.TreeViewColumn("Modified", rend)
+        date.set_cell_data_func(rend, self._render_date)
+        self.tv.append_column(date)
 
         self.tv.get_selection().connect("changed", self.on_selection_changed)
 
@@ -329,6 +365,10 @@ class UI(threading.Thread):
 
         w = self.widgets.get_widget("window1")
         w.show_all()
+
+    def _render_date(self, column, cell, model, iter_):
+        d = model.get_value(iter_, 2)
+        cell.props.text = humanize_date_difference(now=self.time_started, otherdate=d)
 
     def _get_details_dict(self):
         today = datetime.date.today()
@@ -391,13 +431,14 @@ class UI(threading.Thread):
         gtk.main_quit()
 
     def collect_stats_finished(self):
-        for p,commits in self.stats.get_projects():
-            self.model.append((p,commits))
+        for p,d,commits in self.stats.get_projects():
+            self.model.append((p,commits,d))
         self.tv.set_model(self.model)
         for i in self.BTNS:
             self.widgets.get_widget(i).set_sensitive(True)
 
     def run(self):
+        self.time_started = datetime.datetime.now()
         self.stats.collect_stats()
         self.stats.generate_stats()
         gobject.idle_add(self.collect_stats_finished)
