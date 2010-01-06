@@ -1,0 +1,40 @@
+<html>
+
+    <TMPL_INCLUDE header.tmpl>
+
+    <div id="body"><div id="content">
+        <h1><TMPL_VAR date_generated></h1>
+        <table width="100%">
+            <tr>
+                <td width="60%" valign="top">
+                    <h2>Authors</h2>
+                    <ul>
+                        <TMPL_LOOP Authors>
+                            <li><TMPL_VAR author_name> <TMPL_VAR author_freq> (<TMPL_VAR author_projects>)</li>
+                        </TMPL_LOOP>      
+                    </ul>
+                </td>
+                <td width="40%" valign="top">
+                    <img src="<TMPL_VAR author_chart>"/>  
+                </td>
+            </tr>
+            <tr>
+                <td width="60%" valign="top">
+                    <h2>Projects</h2>
+                    <ul>
+                        <TMPL_LOOP Projects>
+                            <li><TMPL_VAR project_name> <TMPL_VAR project_freq> (<TMPL_VAR project_authors>)</li>
+                        </TMPL_LOOP>
+                    </ul>
+                </td>
+                <td width="40%" valign="top">
+                    <img src="<TMPL_VAR project_chart>"/>
+                </td>
+            </tr>
+        </table>
+    </div></div>
+
+    <TMPL_INCLUDE footer.tmpl>
+
+</html>
+

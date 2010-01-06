@@ -55,16 +55,33 @@ def humanize_date_difference(now, otherdate=None, offset=None):
     else:
         return "%ds ago" % delta_s
 
-class HtmlRenderer:
-
-    SECTION_PROJECT = "projects"
-    SECTION_AUTHOR = "authors"
-
-    def __init__(self, template_name="gnome.tmpl"):
+class _HtmlRenderer:
+    def __init__(self, template_name, page_name):
         self._data = {}
         self.template = htmltmpl.TemplateManager().prepare(template_name)
         self.tproc = htmltmpl.TemplateProcessor()
         self.tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
+        self.tproc.set("page_name", page_name)
+
+    def render_template(self):
+        pass
+
+    def render(self):
+        self.render_template()
+        return self.tproc.process(self.template)
+
+class LoadingHtmlRenderer(_HtmlRenderer):
+    def __init__(self):
+        _HtmlRenderer.__init__(self, "loading.tmpl", "Loading")
+
+class SummaryHtmlRenderer(_HtmlRenderer):
+
+    SECTION_PROJECT = "projects"
+    SECTION_AUTHOR = "authors"
+
+    def __init__(self):
+        _HtmlRenderer.__init__(self, "summary.tmpl", "GNOME Development Activity Summary")
+        self._data = {}
 
     def _get_chart_url(self, section, data_name, data_data, width=500,limit=20, bh=20):
         limit = min(len(self._data[section])-1,limit)
@@ -96,7 +113,7 @@ class HtmlRenderer:
 
         return chart.get_url()
 
-    def _render_template(self, limit):
+    def render_template(self, limit=10):
 
         #Projects
         self.tproc.set("Projects", self.get_data(self.SECTION_PROJECT, limit))
@@ -119,9 +136,6 @@ class HtmlRenderer:
             return self._data[section][0:min(len(self._data[section])-1,limit)]
         except KeyError:
             return []
-
-    def render(self, limit=10):
-        return self._render_template(limit)
 
 class SVNCommitsParser(sgmllib.SGMLParser):
     """
@@ -203,7 +217,7 @@ class Stats:
                         branch text, message text, d timestamp)''')
 
         self.r = re.compile(self.RE_EXP)
-        self.rend = HtmlRenderer()
+        self.rend = SummaryHtmlRenderer()
 
     def collect_stats(self):
         if self.filename and os.path.exists(self.filename):
@@ -326,7 +340,7 @@ class Stats:
 
 class UI(threading.Thread):
 
-    BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn", "new_patches_btn")
+    BTNS = ("commit_btn","changelog_btn","news_btn","new_patches_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
@@ -344,12 +358,27 @@ class UI(threading.Thread):
         self.widgets = gtk.glade.XML("ui.glade", "window1")
         self.widgets.signal_autoconnect(self)
 
+        loadingtxt = LoadingHtmlRenderer().render()
+
+        #setup planet GNOME
+        pg = webkit.WebView()
+        pg.open("http://planet.gnome.org")
+        self.widgets.get_widget("planetGnomeScrolledWindow").add(pg)
+
+        #setup summary page
+        self.summaryWebkit = webkit.WebView()
+        self.summaryWebkit.load_string(
+                        loadingtxt,
+                        "text/html", "iso-8859-15", "commits:")
+        self.widgets.get_widget("summaryScrolledWindow").add(self.summaryWebkit)
+
         self.sb = self.widgets.get_widget("statusbar1")
-        sw = self.widgets.get_widget("scrolledwindow1")
-        self.webkit = webkit.WebView()
-        sw.props.hscrollbar_policy = gtk.POLICY_AUTOMATIC
-        sw.props.vscrollbar_policy = gtk.POLICY_AUTOMATIC
-        sw.add(self.webkit)
+        sw = self.widgets.get_widget("projectScrolledWindow")
+        self.projectWebkit = webkit.WebView()
+        self.projectWebkit.load_string(
+                        loadingtxt,
+                        "text/html", "iso-8859-15", "project:")
+        sw.add(self.projectWebkit)
 
         self.model = gtk.ListStore(str,int, object)
         self.tv = self.widgets.get_widget("treeview1")
@@ -362,8 +391,6 @@ class UI(threading.Thread):
         self.tv.append_column(date)
 
         self.tv.get_selection().connect("changed", self.on_selection_changed)
-
-        self._open_url("http://planet.gnome.org")
 
         w = self.widgets.get_widget("window1")
         w.show_all()
@@ -397,7 +424,7 @@ class UI(threading.Thread):
                 self.sb.get_context_id("url"),
                 url
         )
-        self.webkit.open(url)
+        self.projectWebkit.open(url)
 
     def on_selection_changed(self, selection):
         model,iter_ = selection.get_selected()
@@ -418,12 +445,6 @@ class UI(threading.Thread):
         if self.proj:
             self._open_url(self.NEWS_STR % self._get_details_dict())
 
-    def on_summary_btn_clicked(self, *args):
-        self.webkit.load_string(
-                        self.stats.get_summary(), 
-                        "text/html", "iso-8859-15", "commits:"
-        )
-
     def on_new_patches_btn_clicked(self, *args):
         if self.proj:
             self._open_url(self.NEW_PATCHES_STR % self._get_details_dict())
@@ -438,6 +459,11 @@ class UI(threading.Thread):
         self.tv.set_model(self.model)
         for i in self.BTNS:
             self.widgets.get_widget(i).set_sensitive(True)
+
+        self.summaryWebkit.load_string(
+                        self.stats.get_summary(), 
+                        "text/html", "iso-8859-15", "commits:"
+        )
 
     def run(self):
         self.time_started = datetime.datetime.now()
