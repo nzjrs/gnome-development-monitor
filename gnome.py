@@ -346,6 +346,9 @@ class UI(threading.Thread):
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
     NEW_PATCHES_STR = "https://bugzilla.gnome.org/page.cgi?id=patchreport.html&product=%(escaped_project)s&patch-status=&max_days=%(days)s"
 
+    #keep in sync with ui file
+    PROJECT_NOTEBOOK_PAGE = 1
+
     def __init__(self, stats):
         threading.Thread.__init__(self)
         self.stats = stats
@@ -382,15 +385,22 @@ class UI(threading.Thread):
 
         self.model = gtk.ListStore(str,int, object)
         self.tv = self.widgets.get_widget("treeview1")
-        self.tv.append_column(gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0))
-        self.tv.append_column(gtk.TreeViewColumn("Commits", gtk.CellRendererText(), text=1))
+
+        col = gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0)
+        col.set_sort_column_id(0)
+        self.tv.append_column(col)
+
+        col = gtk.TreeViewColumn("Commits", gtk.CellRendererText(), text=1)
+        col.set_sort_column_id(1)
+        self.tv.append_column(col)
 
         rend = gtk.CellRendererText()
         date = gtk.TreeViewColumn("Modified", rend)
         date.set_cell_data_func(rend, self._render_date)
         self.tv.append_column(date)
-
         self.tv.get_selection().connect("changed", self.on_selection_changed)
+
+        self.notebook = self.widgets.get_widget("notebook1")
 
         w = self.widgets.get_widget("window1")
         w.show_all()
@@ -419,12 +429,13 @@ class UI(threading.Thread):
             "days":self.stats.days,
         }
 
-    def _open_url(self, url):
+    def _open_project_url(self, url):
         self.sb.push(
                 self.sb.get_context_id("url"),
                 url
         )
         self.projectWebkit.open(url)
+        self.notebook.set_current_page(self.PROJECT_NOTEBOOK_PAGE)
 
     def on_selection_changed(self, selection):
         model,iter_ = selection.get_selected()
@@ -435,19 +446,19 @@ class UI(threading.Thread):
 
     def on_commit_btn_clicked(self, *args):
         if self.proj:
-            self._open_url(self.LOG_STR % self._get_details_dict())
+            self._open_project_url(self.LOG_STR % self._get_details_dict())
 
     def on_changelog_btn_clicked(self, *args):
         if self.proj:
-            self._open_url(self.CHANGELOG_STR % self._get_details_dict())
+            self._open_project_url(self.CHANGELOG_STR % self._get_details_dict())
 
     def on_news_btn_clicked(self, *args):
         if self.proj:
-            self._open_url(self.NEWS_STR % self._get_details_dict())
+            self._open_project_url(self.NEWS_STR % self._get_details_dict())
 
     def on_new_patches_btn_clicked(self, *args):
         if self.proj:
-            self._open_url(self.NEW_PATCHES_STR % self._get_details_dict())
+            self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
 
 
     def on_window1_destroy(self, *args):
