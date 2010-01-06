@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # SVN Commits Mailing List Parser
 # For generating weekly commit digests
 # (c) John Stowers
@@ -325,8 +327,8 @@ class Stats:
 class UI(threading.Thread):
 
     BTNS = ("commit_btn","changelog_btn","news_btn","summary_btn", "new_patches_btn")
-    CHANGELOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
-    NEWS_STR = "http://git.gnome.org/cgit/%(project)s/log/NEWS"
+    CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
+    NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
     NEW_PATCHES_STR = "https://bugzilla.gnome.org/page.cgi?id=patchreport.html&product=%(escaped_project)s&patch-status=&max_days=%(days)s"
 
