@@ -19,7 +19,6 @@ import pygooglechart
 
 import gobject
 import gtk
-import gtk.glade
 import webkit
 
 gtk.gdk.threads_init()
@@ -54,6 +53,25 @@ def humanize_date_difference(now, otherdate=None, offset=None):
         return "%dm%ds ago" % (delta_m, delta_s)
     else:
         return "%ds ago" % delta_s
+
+class _GtkBuilderWrapper(gtk.Builder):
+    def __init__(self, *path):
+        gtk.Builder.__init__(self)
+        self.add_from_file(os.path.join(*path))
+        self._resources = {}
+
+    def set_instance_resources(self, obj, *resources):
+        for r in resources:
+            setattr(obj, "_%s" % r.lower(), self.get_resource(r))
+
+    def get_object(self, name):
+        if name not in self._resources:
+            w = gtk.Builder.get_object(self,name)
+            if not w:
+                raise Exception("Could not find widget: %s" % name)
+            self._resources[name] = w
+
+        return self._resources[name]
 
 class _HtmlRenderer:
     def __init__(self, template_name, page_name):
@@ -358,25 +376,25 @@ class UI(threading.Thread):
         self.min = None
         self.max = None
 
-        self.widgets = gtk.glade.XML("ui.glade", "window1")
-        self.widgets.signal_autoconnect(self)
+        self.builder = _GtkBuilderWrapper(".", "gnome.ui")
+        self.builder.connect_signals(self)
 
         loadingtxt = LoadingHtmlRenderer().render()
 
         #setup planet GNOME
         pg = webkit.WebView()
         pg.open("http://planet.gnome.org")
-        self.widgets.get_widget("planetGnomeScrolledWindow").add(pg)
+        self.builder.get_object("planetGnomeScrolledWindow").add(pg)
 
         #setup summary page
         self.summaryWebkit = webkit.WebView()
         self.summaryWebkit.load_string(
                         loadingtxt,
                         "text/html", "iso-8859-15", "commits:")
-        self.widgets.get_widget("summaryScrolledWindow").add(self.summaryWebkit)
+        self.builder.get_object("summaryScrolledWindow").add(self.summaryWebkit)
 
-        self.sb = self.widgets.get_widget("statusbar1")
-        sw = self.widgets.get_widget("projectScrolledWindow")
+        self.sb = self.builder.get_object("statusbar1")
+        sw = self.builder.get_object("projectScrolledWindow")
         self.projectWebkit = webkit.WebView()
         self.projectWebkit.load_string(
                         loadingtxt,
@@ -384,7 +402,7 @@ class UI(threading.Thread):
         sw.add(self.projectWebkit)
 
         self.model = gtk.ListStore(str,int, object)
-        self.tv = self.widgets.get_widget("treeview1")
+        self.tv = self.builder.get_object("treeview1")
 
         col = gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0)
         col.set_sort_column_id(0)
@@ -400,9 +418,9 @@ class UI(threading.Thread):
         self.tv.append_column(date)
         self.tv.get_selection().connect("changed", self.on_selection_changed)
 
-        self.notebook = self.widgets.get_widget("notebook1")
+        self.notebook = self.builder.get_object("notebook1")
 
-        w = self.widgets.get_widget("window1")
+        w = self.builder.get_object("window1")
         w.show_all()
 
     def _render_date(self, column, cell, model, iter_):
@@ -469,7 +487,7 @@ class UI(threading.Thread):
             self.model.append((p,commits,d))
         self.tv.set_model(self.model)
         for i in self.BTNS:
-            self.widgets.get_widget(i).set_sensitive(True)
+            self.builder.get_object(i).set_sensitive(True)
 
         self.summaryWebkit.load_string(
                         self.stats.get_summary(), 
