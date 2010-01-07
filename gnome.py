@@ -400,6 +400,12 @@ class Stats:
                     author_name=name, author_freq=freq, author_projects=projects)
 
         #Get commits per project
+        #notes:
+        # MAX(d) is the most recent edit date
+        # COUNT(*) is the number of commits when the GROUP by is applied
+        # We sort first by the date, and then by the ROWID, as the rowid is
+        #       monotonically increasing, larger rowids were lower on the
+        #       page, and hence more recent commits
         i = []
         self.c.execute('''
                 SELECT project, MAX(d) as "d [timestamp]", COUNT(*) as c
@@ -407,7 +413,7 @@ class Stats:
                 WHERE d >= datetime("now","-%d days") 
                 AND istranslation %s 0 
                 GROUP BY project 
-                ORDER BY d DESC''' % (self.days,self.includetranslations))
+                ORDER BY d DESC, ROWID DESC''' % (self.days,self.includetranslations))
         for name, d, freq in self.c:
             #print "name: %s\n\tdate %s %s\n\t\tfreq: %s" % (name, d, type(d), freq)
             i.append([name, freq, ""])
