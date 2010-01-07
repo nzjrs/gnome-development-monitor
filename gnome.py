@@ -200,6 +200,7 @@ class SVNCommitsParser(sgmllib.SGMLParser):
     def handle_data(self, data):
         if self.inside_strong_element:
             self.date = dateutil.parser.parse(data)
+            #print self.date, type(self.date)
             return
 
         if self.inside_li_element and self.inside_a_element:
@@ -228,7 +229,7 @@ class Stats:
         self.filename = filename
 
         self.projects = []
-        conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+        conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES, check_same_thread=False)
         #don't explode on unknown unicode
         conn.text_factory = lambda bin: bin.decode("utf8", "replace")
         self.c = conn.cursor()
@@ -264,6 +265,8 @@ class Stats:
 
 
         for f, filename in files:
+            print "DOWNLOADING PAGE: %s" % filename
+
             data = f.read()
             f.close()
 
@@ -302,7 +305,7 @@ class Stats:
         #Do in 2 steps because my SQL foo is not strong enough to
         #get the list of projects/authors per author/project
 
-        #Authors
+        #Get commits per authors
         i = []
         self.c.execute('''
                 SELECT author, COUNT(*) as c
@@ -313,6 +316,7 @@ class Stats:
         for name, freq in self.c:
             i.append([name, freq, ""])
 
+        #Calculate which projects each author committed to
         for j in i:
             self.c.execute('''
                     SELECT project
@@ -326,15 +330,16 @@ class Stats:
                     self.rend.SECTION_AUTHOR,
                     author_name=name, author_freq=freq, author_projects=projects)
 
-        #Projects
+        #Get commits per project
         i = []
         self.c.execute('''
-                SELECT project, d, COUNT(*) as c
+                SELECT project, MAX(d) as "d [timestamp]", COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-%d days") 
                 GROUP BY project 
                 ORDER BY d DESC''' % self.days)
         for name, d, freq in self.c:
+            #print "name: %s\n\tdate %s %s\n\t\tfreq: %s" % (name, d, type(d), freq)
             i.append([name, freq, ""])
             self.projects.append((name, d, freq))
 
