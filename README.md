@@ -1,6 +1,7 @@
 GNOME Development Monitor
 =========================
-![Screenshot](http://github.com/nzjrs/gnome-svn-commits-monitor/raw/0dcd605a2723ae60492b19d9f132fba2417352d1/screenshot.jpg)
+![Screenshot](http://github.com/nzjrs/gnome-svn-commits-monitor/raw/master/screenshot.jpg)
+
 Introduction
 ------------
 GNOME Development Monitor is a simple graphical tool to follow the the development activity of projects hosted in GNOME SVN.
@@ -20,14 +21,15 @@ Usage
 You need to have `pygtk`, `python-htmltmpl`, `python-dateutil` and `python-webkitgtk` installed. If the program crashes, freezes, or misbehaves then please upgrade your Webkit version. Usage is as follows;
 
     Usage: gnome.py [options]
-    
+
     Options:
       -h, --help            show this help message and exit
       -s FILE, --source=FILE
                             read statistics from FILE [default: read from web]
       -d DAYS, --days=DAYS  the number of days to consider for statistics
-      -t, --include-translation
-                        include translation commits (po) in statistics
+      -t [include|exclude|only], --translations=[include|exclude|only]
+                            include translation commits in analysis [default:
+                            exclude]
 
 Implementation Details
 -----------------------
