@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Terminal=false
-Name=GNOME Commits Monitor
-Comment=GNOME Commits Monitor
+Name=GNOME Development Monitor
+Comment=GNOME Development Monitor
 Icon=gnome
 Exec=gnome.py
 Categories=GNOME;GTK;Development;Other;
