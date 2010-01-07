@@ -29,6 +29,17 @@ def humanize_date_difference(now, otherdate=None, offset=None):
     if otherdate:
         dt = otherdate - now
         offset = dt.seconds + (dt.days * 60*60*24)
+
+    #FIXME: The following sufficient, and the remaining code
+    #is not necessary or useful until we can also parse
+    #the hour of the commit
+    if dt.days == 0:
+        return "today"
+    elif dt.days == -1:
+        return "yesterday"
+    else:
+        return "%d days ago" % -dt.days
+
     if offset:
         delta_s = offset % 60
         offset /= 60
@@ -200,7 +211,6 @@ class SVNCommitsParser(sgmllib.SGMLParser):
     def handle_data(self, data):
         if self.inside_strong_element:
             self.date = dateutil.parser.parse(data)
-            #print self.date, type(self.date)
             return
 
         if self.inside_li_element and self.inside_a_element:
@@ -378,10 +388,8 @@ class UI(threading.Thread):
         threading.Thread.__init__(self)
         self.stats = stats
 
-        #selected project (and revisions)
-        self.proj = None
-        self.min = None
-        self.max = None
+        #selected project
+        self.project = None
 
         self.builder = _GtkBuilderWrapper(DATADIR, "gnome.ui")
         self.builder.connect_signals(self)
@@ -410,6 +418,7 @@ class UI(threading.Thread):
 
         self.model = gtk.ListStore(str,int, object)
         self.tv = self.builder.get_object("treeview1")
+        self.tv.get_selection().connect("changed", self.on_selection_changed)
 
         col = gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0)
         col.set_sort_column_id(0)
@@ -420,10 +429,9 @@ class UI(threading.Thread):
         self.tv.append_column(col)
 
         rend = gtk.CellRendererText()
-        date = gtk.TreeViewColumn("Modified", rend)
+        date = gtk.TreeViewColumn("Last Commit", rend)
         date.set_cell_data_func(rend, self._render_date)
         self.tv.append_column(date)
-        self.tv.get_selection().connect("changed", self.on_selection_changed)
 
         self.notebook = self.builder.get_object("notebook1")
 
@@ -438,17 +446,9 @@ class UI(threading.Thread):
         today = datetime.date.today()
         old = today-datetime.timedelta(days=self.stats.days)
 
-        #so we always see a diff
-        if self.min == self.max:
-            min_ = self.max -1
-        else:
-            min_ = self.min
-
         return {
-            "project":self.proj,
-            "escaped_project":urllib.quote(self.proj),
-            "r1":self.max,
-            "r2":min_,
+            "project":self.project,
+            "escaped_project":urllib.quote(self.project),
             "today_date":today.strftime("%Y-%m-%d"),
             "last_date":old.strftime("%Y-%m-%d"),
             "days":self.stats.days,
@@ -465,24 +465,22 @@ class UI(threading.Thread):
     def on_selection_changed(self, selection):
         model,iter_ = selection.get_selected()
         if model and iter_:
-            self.proj = model.get_value(iter_, 0)
-            self.max = model.get_value(iter_, 1)
-            self.min = model.get_value(iter_, 2)
+            self.project = model.get_value(iter_, 0)
 
     def on_commit_btn_clicked(self, *args):
-        if self.proj:
+        if self.project:
             self._open_project_url(self.LOG_STR % self._get_details_dict())
 
     def on_changelog_btn_clicked(self, *args):
-        if self.proj:
+        if self.project:
             self._open_project_url(self.CHANGELOG_STR % self._get_details_dict())
 
     def on_news_btn_clicked(self, *args):
-        if self.proj:
+        if self.project:
             self._open_project_url(self.NEWS_STR % self._get_details_dict())
 
     def on_new_patches_btn_clicked(self, *args):
-        if self.proj:
+        if self.project:
             self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
 
 
