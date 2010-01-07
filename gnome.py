@@ -23,6 +23,8 @@ import webkit
 
 gtk.gdk.threads_init()
 
+DATADIR = os.path.abspath(os.path.dirname(__file__))
+
 def humanize_date_difference(now, otherdate=None, offset=None):
     if otherdate:
         dt = otherdate - now
@@ -90,7 +92,7 @@ class _HtmlRenderer:
 
 class LoadingHtmlRenderer(_HtmlRenderer):
     def __init__(self):
-        _HtmlRenderer.__init__(self, "loading.tmpl", "Loading")
+        _HtmlRenderer.__init__(self, os.path.join(DATADIR,"loading.tmpl"), "Loading")
 
 class SummaryHtmlRenderer(_HtmlRenderer):
 
@@ -98,7 +100,7 @@ class SummaryHtmlRenderer(_HtmlRenderer):
     SECTION_AUTHOR = "authors"
 
     def __init__(self):
-        _HtmlRenderer.__init__(self, "summary.tmpl", "GNOME Development Activity Summary")
+        _HtmlRenderer.__init__(self, os.path.join(DATADIR,"summary.tmpl"), "GNOME Development Activity Summary")
         self._data = {}
 
     def _get_chart_url(self, section, data_name, data_data, width=500,limit=20, bh=20):
@@ -376,7 +378,7 @@ class UI(threading.Thread):
         self.min = None
         self.max = None
 
-        self.builder = _GtkBuilderWrapper(".", "gnome.ui")
+        self.builder = _GtkBuilderWrapper(DATADIR, "gnome.ui")
         self.builder.connect_signals(self)
 
         loadingtxt = LoadingHtmlRenderer().render()
