@@ -250,7 +250,7 @@ class Stats:
         conn.text_factory = lambda bin: bin.decode("utf8", "replace")
         self.c = conn.cursor()
         self.c.execute('''CREATE TABLE commits 
-                        (project text, author text, rev int, 
+                        (project text, author text, 
                         branch text, message text, d timestamp, istranslation int)''')
 
         #in the database, istranslations is 0 or 1, so we can either include,
@@ -314,7 +314,6 @@ class Stats:
 
                 #break up the message and parse
                 try:
-                    rev = 1
                     proj, message = n.groups()
                     try:
                         proj,branch = proj.split("/")
@@ -329,9 +328,9 @@ class Stats:
                         istranslation = 0
 
                     self.c.execute('''INSERT INTO commits 
-                                (project, author, rev, branch, message, d, istranslation) VALUES
-                                (?, ?, ?, ?, ?, ?, ?)''',
-                                (proj, auth, rev, branch, message, date, istranslation))
+                                (project, author, branch, message, d, istranslation) VALUES
+                                (?, ?, ?, ?, ?, ?)''',
+                                (proj, auth, branch, message, date, istranslation))
 
                 except ValueError:
                     fail.append(msg)
