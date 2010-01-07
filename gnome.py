@@ -232,9 +232,15 @@ class SVNCommitsParser(sgmllib.SGMLParser):
 class Stats:
 
     RE_EXP = "^\[([\w+\-/]+)\] (.*)"
+    RE_TRANSLATION_MESSAGE = "([Uu]pdated|[Aa]dded) .* ([Tt]ranslation)"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
-    def __init__(self, filename, days):
+    TRANSLATION_INCLUDE = "include"
+    TRANSLATION_EXCLUDE = "exclude"
+    TRANSLATION_ONLY = "only"
+    TRANSLATION_CHOICES = (TRANSLATION_INCLUDE,TRANSLATION_EXCLUDE,TRANSLATION_ONLY)
+
+    def __init__(self, filename, days, includetranslations):
         self.days = days
         self.filename = filename
 
@@ -245,9 +251,25 @@ class Stats:
         self.c = conn.cursor()
         self.c.execute('''CREATE TABLE commits 
                         (project text, author text, rev int, 
-                        branch text, message text, d timestamp)''')
+                        branch text, message text, d timestamp, istranslation int)''')
+
+        #in the database, istranslations is 0 or 1, so we can either include,
+        #exclude or only consider translation commits depending on how we 
+        #compare against this value in the SELECT clause, e.g
+        # SELECT where istranslation ?? 0
+        if includetranslations == self.TRANSLATION_INCLUDE:
+            self.includetranslations = ">="
+        elif includetranslations == self.TRANSLATION_EXCLUDE:
+            self.includetranslations = "="
+        elif includetranslations == self.TRANSLATION_ONLY:
+            self.includetranslations = ">"
+        else:
+            raise Exception("Invalid translation filter: %s" % includetranslations)
+
+        print "TRANSLATIONS: Analysis %s" % includetranslations
 
         self.r = re.compile(self.RE_EXP)
+        self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
         self.rend = SummaryHtmlRenderer()
 
     def collect_stats(self):
@@ -273,7 +295,7 @@ class Stats:
                     (urllib.urlopen(filename), filename)
                 )
 
-
+        numtranslations = 0
         for f, filename in files:
             print "DOWNLOADING PAGE: %s" % filename
 
@@ -299,17 +321,25 @@ class Stats:
                     except ValueError:
                         branch = "master"
 
+                    #check if this is a translation commit
+                    if self.rt.match(message):
+                        numtranslations += 1
+                        istranslation = 1
+                    else:
+                        istranslation = 0
+
                     self.c.execute('''INSERT INTO commits 
-                                (project, author, rev, branch, message, d) VALUES
-                                (?, ?, ?, ?, ?, ?)''',
-                                (proj, auth, rev, branch, message, date))
+                                (project, author, rev, branch, message, d, istranslation) VALUES
+                                (?, ?, ?, ?, ?, ?, ?)''',
+                                (proj, auth, rev, branch, message, date, istranslation))
 
                 except ValueError:
                     fail.append(msg)
 
             total = parser.get_num_parsed_lines()
             failed = len(fail)
-            print "PARSING PAGE: %s\nMatched %d/%d commit messages" % (filename,total-failed,total)
+            print "PARSING PAGE: %s" % filename
+            print "RESULTS: Matched %d/%d commit messages (%d translations)" % (total-failed,total,numtranslations)
 
     def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
@@ -321,8 +351,9 @@ class Stats:
                 SELECT author, COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-%d days")
+                AND istranslation %s 0 
                 GROUP BY author 
-                ORDER BY c DESC''' % self.days)
+                ORDER BY c DESC''' % (self.days,self.includetranslations))
         for name, freq in self.c:
             i.append([name, freq, ""])
 
@@ -333,7 +364,8 @@ class Stats:
                     FROM commits 
                     WHERE author = "%s" 
                     AND d >= datetime("now","-%d days") 
-                    GROUP BY project''' % (j[0], self.days))
+                    AND istranslation %s 0 
+                    GROUP BY project''' % (j[0], self.days,self.includetranslations))
             j[2] = ", ".join([p for p, in self.c])
         for name, freq, projects in i:
             self.rend.add_data(
@@ -346,8 +378,9 @@ class Stats:
                 SELECT project, MAX(d) as "d [timestamp]", COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-%d days") 
+                AND istranslation %s 0 
                 GROUP BY project 
-                ORDER BY d DESC''' % self.days)
+                ORDER BY d DESC''' % (self.days,self.includetranslations))
         for name, d, freq in self.c:
             #print "name: %s\n\tdate %s %s\n\t\tfreq: %s" % (name, d, type(d), freq)
             i.append([name, freq, ""])
@@ -359,7 +392,8 @@ class Stats:
                     FROM commits 
                     WHERE project = "%s" 
                     AND d >= datetime("now","-%d days") 
-                    GROUP BY author''' % (j[0], self.days))
+                    AND istranslation %s 0 
+                    GROUP BY author''' % (j[0], self.days, self.includetranslations))
             j[2] = ", ".join([p for p, in self.c])
 
         for name,freq, projects in i:
@@ -518,10 +552,15 @@ if __name__ == "__main__":
     parser.add_option("-d", "--days",
                   type="int", default=7,
                   help="the number of days to consider for statistics")
+    parser.add_option("-t", "--translations",
+                  choices=Stats.TRANSLATION_CHOICES,
+                  metavar="[%s]" % "|".join(Stats.TRANSLATION_CHOICES),
+                  default=Stats.TRANSLATION_EXCLUDE,
+                  help="include translation commits in analysis [default: %default]")
 
     options, args = parser.parse_args()
 
-    s = Stats(filename=options.source, days=options.days)
+    s = Stats(filename=options.source, days=options.days, includetranslations=options.translations)
     ui = UI(s)
     ui.main()
 
