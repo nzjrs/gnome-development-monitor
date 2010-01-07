@@ -6,7 +6,7 @@ Introduction
 ------------
 GNOME Development Monitor is a simple graphical tool to follow the the development activity of projects hosted in GNOME SVN.
 
-By analysis of SVN commit records (for the last N days) it is able to generate and display the following information;
+By analysis of commit records (for the last N days) it is able to generate and display the following information;
 
 * Aggregate statistics, like [GNOME Commit digest]("http://blogs.gnome.org/commitdigest/").
 * For each project;
@@ -27,6 +27,7 @@ You need to have `pygtk`, `python-htmltmpl`, `python-dateutil` and `python-webki
       -s FILE, --source=FILE
                             read statistics from FILE [default: read from web]
       -d DAYS, --days=DAYS  the number of days to consider for statistics
+                            [default: 7]
       -t [include|exclude|only], --translations=[include|exclude|only]
                             include translation commits in analysis [default:
                             exclude]

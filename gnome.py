@@ -451,7 +451,6 @@ class UI(threading.Thread):
 
         self.model = gtk.ListStore(str,int, object)
         self.tv = self.builder.get_object("treeview1")
-        self.tv.get_selection().connect("changed", self.on_selection_changed)
 
         col = gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0)
         col.set_sort_column_id(0)
@@ -487,35 +486,42 @@ class UI(threading.Thread):
             "days":self.stats.days,
         }
 
-    def _open_project_url(self, url):
+    def _statusbar_update(self, note):
         self.sb.push(
                 self.sb.get_context_id("url"),
-                url
+                note
         )
+
+    def _open_project_url(self, url):
+        self._statusbar_update(url)
         self.projectWebkit.open(url)
         self.notebook.set_current_page(self.PROJECT_NOTEBOOK_PAGE)
 
-    def on_selection_changed(self, selection):
-        model,iter_ = selection.get_selected()
+    def _get_selected_project(self):
+        model,iter_ = self.tv.get_selection().get_selected()
         if model and iter_:
             self.project = model.get_value(iter_, 0)
+        else:
+            self._statusbar_update("Please select a project")
+            self.project = None
+
+        return self.project
 
     def on_commit_btn_clicked(self, *args):
-        if self.project:
+        if self._get_selected_project():
             self._open_project_url(self.LOG_STR % self._get_details_dict())
 
     def on_changelog_btn_clicked(self, *args):
-        if self.project:
+        if self._get_selected_project():
             self._open_project_url(self.CHANGELOG_STR % self._get_details_dict())
 
     def on_news_btn_clicked(self, *args):
-        if self.project:
+        if self._get_selected_project():
             self._open_project_url(self.NEWS_STR % self._get_details_dict())
 
     def on_new_patches_btn_clicked(self, *args):
-        if self.project:
+        if self._get_selected_project():
             self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
-
 
     def on_window1_destroy(self, *args):
         gtk.main_quit()
@@ -550,7 +556,7 @@ if __name__ == "__main__":
                   help="read statistics from FILE [default: read from web]", metavar="FILE")
     parser.add_option("-d", "--days",
                   type="int", default=7,
-                  help="the number of days to consider for statistics")
+                  help="the number of days to consider for statistics [default: %default]")
     parser.add_option("-t", "--translations",
                   choices=Stats.TRANSLATION_CHOICES,
                   metavar="[%s]" % "|".join(Stats.TRANSLATION_CHOICES),
