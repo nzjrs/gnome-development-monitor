@@ -7,6 +7,7 @@
 
 import sqlite3
 import urllib
+import urllib2
 import sgmllib
 import re
 import os.path
@@ -234,7 +235,7 @@ class SVNCommitsParser(sgmllib.SGMLParser):
 class Stats:
 
     RE_EXP = "^\[([\w+\-/]+)\] (.*)"
-    RE_TRANSLATION_MESSAGE = "([Uu]pdated|[Aa]dded) .* ([Tt]ranslation)"
+    RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
     TRANSLATION_INCLUDE = "include"
@@ -242,11 +243,14 @@ class Stats:
     TRANSLATION_ONLY = "only"
     TRANSLATION_CHOICES = (TRANSLATION_INCLUDE,TRANSLATION_EXCLUDE,TRANSLATION_ONLY)
 
-    def __init__(self, filename, days, includetranslations):
+    def __init__(self, filename, days, translations):
         self.days = days
         self.filename = filename
 
         self.projects = []
+        #parse stats, (parsed ok, total, num translations)
+        self.parse_stats = (0,0,0)
+
         conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES, check_same_thread=False)
         #don't explode on unknown unicode
         conn.text_factory = lambda bin: bin.decode("utf8", "replace")
@@ -259,28 +263,36 @@ class Stats:
         #exclude or only consider translation commits depending on how we 
         #compare against this value in the SELECT clause, e.g
         # SELECT where istranslation ?? 0
-        if includetranslations == self.TRANSLATION_INCLUDE:
+        if translations == self.TRANSLATION_INCLUDE:
             self.includetranslations = ">="
-        elif includetranslations == self.TRANSLATION_EXCLUDE:
+        elif translations == self.TRANSLATION_EXCLUDE:
             self.includetranslations = "="
-        elif includetranslations == self.TRANSLATION_ONLY:
+        elif translations == self.TRANSLATION_ONLY:
             self.includetranslations = ">"
         else:
-            raise Exception("Invalid translation filter: %s" % includetranslations)
+            raise Exception("Invalid translation filter: %s" % translations)
 
-        print "TRANSLATIONS: Analysis %s" % includetranslations
+        self.translations = translations
+        print "TRANSLATIONS: %s" % self.translations
 
         self.r = re.compile(self.RE_EXP)
         self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
         self.rend = SummaryHtmlRenderer()
 
     def _download_page(self, url):
+        msg = ""
         try:
             print "DOWNLOADING PAGE: %s" % url
-            return urllib.urlopen(url)
-        except IOError:
-            print "COULD NOT DOWNLOAD: %s" % url
-            return None
+            return urllib2.urlopen(urllib2.Request(url))
+        except urllib2.HTTPError, e:
+            msg = "The server couldn\'t fulfill the request. (error code: %s)" % e.code
+        except urllib2.URLError, e:
+            msg = "We failed to reach a server. (reason: %s)" % e.reason
+        except Exception, e:
+            msg = str(e)            
+
+        print "COULD NOT DOWNLOAD: %s (%s)" % (url, msg)
+        return None
 
     def collect_stats(self):
         if self.filename and os.path.exists(self.filename):
@@ -349,9 +361,12 @@ class Stats:
                     fail.append(msg)
 
             total = parser.get_num_parsed_lines()
-            failed = len(fail)
+            parsed = total-len(fail)
+
+            self.parse_stats = (parsed,total,numtranslations)
+
             print "PARSING PAGE: %s" % filename
-            print "RESULTS: Matched %d/%d commit messages (%d translations)" % (total-failed,total,numtranslations)
+            print "RESULTS: %s" % self.get_statistics().capitalize()
 
     def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
@@ -418,6 +433,12 @@ class Stats:
 
     def get_projects(self):
         return self.projects
+
+    def got_data(self):
+        return self.parse_stats[0] > 0 and len(self.projects) > 0
+
+    def get_statistics(self):
+        return "matched %d/%d commit messages (%d translations)" % self.parse_stats
 
 class UI(threading.Thread):
 
@@ -540,6 +561,11 @@ class UI(threading.Thread):
         gtk.main_quit()
 
     def collect_stats_finished(self):
+        if not self.stats.got_data():
+            self._statusbar_update("Download failed")
+            return
+
+        self._statusbar_update("Download finished, %s" % self.stats.get_statistics())
         for p,d,commits in self.stats.get_projects():
             self.model.append((p,commits,d))
         self.tv.set_model(self.model)
@@ -552,12 +578,19 @@ class UI(threading.Thread):
         )
 
     def run(self):
-        self.time_started = datetime.datetime.now()
+        #FIXME: Until we can record the commit time, no need to care about the 
+        #time started, the date will do
+        #self.time_started = datetime.datetime.now()
+        self.time_started = datetime.datetime.fromordinal(datetime.date.today().toordinal())
         self.stats.collect_stats()
         self.stats.generate_stats()
         gobject.idle_add(self.collect_stats_finished)
 
     def main(self):
+        self._statusbar_update("Downloading %d day%s of development history (%s translations)" % (
+                        self.stats.days,
+                        {True:"s",False:""}[self.stats.days > 1],
+                        self.stats.translations))
         self.start()
         gtk.main()
 
@@ -568,7 +601,7 @@ if __name__ == "__main__":
     parser.add_option("-s", "--source",
                   help="read statistics from FILE [default: read from web]", metavar="FILE")
     parser.add_option("-d", "--days",
-                  type="int", default=7,
+                  type="int", default=5,
                   help="the number of days to consider for statistics [default: %default]")
     parser.add_option("-t", "--translations",
                   choices=Stats.TRANSLATION_CHOICES,
@@ -578,7 +611,7 @@ if __name__ == "__main__":
 
     options, args = parser.parse_args()
 
-    s = Stats(filename=options.source, days=options.days, includetranslations=options.translations)
+    s = Stats(filename=options.source, days=options.days, translations=options.translations)
     ui = UI(s)
     ui.main()
 

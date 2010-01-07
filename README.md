@@ -27,7 +27,7 @@ You need to have `pygtk`, `python-htmltmpl`, `python-dateutil` and `python-webki
       -s FILE, --source=FILE
                             read statistics from FILE [default: read from web]
       -d DAYS, --days=DAYS  the number of days to consider for statistics
-                            [default: 7]
+                            [default: 5]
       -t [include|exclude|only], --translations=[include|exclude|only]
                             include translation commits in analysis [default:
                             exclude]
