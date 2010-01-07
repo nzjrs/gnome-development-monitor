@@ -89,7 +89,9 @@ class _GtkBuilderWrapper(gtk.Builder):
 class _HtmlRenderer:
     def __init__(self, template_name, page_name):
         self._data = {}
-        self.template = htmltmpl.TemplateManager().prepare(template_name)
+        #disable precompilation otherwise it tries to write the precompiled
+        #template back to system dirs e.g. /usr/
+        self.template = htmltmpl.TemplateManager(precompile=0, debug=0).prepare(template_name)
         self.tproc = htmltmpl.TemplateProcessor()
         self.tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
         self.tproc.set("page_name", page_name)
@@ -272,6 +274,14 @@ class Stats:
         self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
         self.rend = SummaryHtmlRenderer()
 
+    def _download_page(self, url):
+        try:
+            print "DOWNLOADING PAGE: %s" % url
+            return urllib.urlopen(url)
+        except IOError:
+            print "COULD NOT DOWNLOAD: %s" % url
+            return None
+
     def collect_stats(self):
         if self.filename and os.path.exists(self.filename):
             files = [
@@ -282,9 +292,10 @@ class Stats:
             last = today - datetime.timedelta(days=self.days)
             files = []
 
+
             filename = self.LIST_ARCHIVE_URL % today.strftime("%Y-%B")
             files.append(
-                (urllib.urlopen(filename), filename)
+                (self._download_page(filename), filename)
             )
 
             #if we are in the first n days of this month, and we require > n days of data
@@ -292,12 +303,14 @@ class Stats:
             if today.month != last.month:
                 filename = self.LIST_ARCHIVE_URL % last.strftime("%Y-%B")
                 files.append(
-                    (urllib.urlopen(filename), filename)
+                    (self._download_page(filename), filename)
                 )
+
 
         numtranslations = 0
         for f, filename in files:
-            print "DOWNLOADING PAGE: %s" % filename
+            if not f:
+                continue
 
             data = f.read()
             f.close()
