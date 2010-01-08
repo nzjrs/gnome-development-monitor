@@ -119,7 +119,7 @@ class SummaryHtmlRenderer(_HtmlRenderer):
     SECTION_LAST_DATE = "last_date"
 
     def __init__(self):
-        _HtmlRenderer.__init__(self, os.path.join(DATADIR,"summary.tmpl"), "GNOME Development Activity Summary")
+        _HtmlRenderer.__init__(self, os.path.join(DATADIR,"summary.tmpl"), "GNOME Development Activity")
         self._data = {}
 
     def _get_chart_url(self, section, data_name, data_data, width=500,limit=20, bh=20):
