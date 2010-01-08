@@ -390,7 +390,7 @@ class Stats:
             self.parse_stats = (parsed,total,numtranslations)
 
             print "PARSING PAGE: %s" % filename
-            print "RESULTS: %s" % self.get_statistics().capitalize()
+            print "RESULTS: %s" % self.get_download_finished_message().capitalize()
 
     def generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
@@ -475,8 +475,23 @@ class Stats:
     def got_data(self):
         return self.parse_stats[0] > 0 and len(self.projects) > 0
 
-    def get_statistics(self):
-        return "matched %d/%d commit messages (%d translations)" % self.parse_stats
+    def get_download_message(self):
+        return "Downloading %d day%s of development history" % (
+                        self.days,
+                        {
+                            True:"s",
+                            False:""
+                        }[self.days > 1])
+
+    def get_download_finished_message(self):
+        msg = "matched %d/%d commit messages (%%s %d translations)" % self.parse_stats
+        return msg % (
+                    {
+                        self.TRANSLATION_INCLUDE:"included",
+                        self.TRANSLATION_EXCLUDE:"excluded",
+                        self.TRANSLATION_ONLY:"only considered"
+                    }[self.translations])
+
 
 class UI(threading.Thread):
 
@@ -603,7 +618,7 @@ class UI(threading.Thread):
             self._statusbar_update("Download failed")
             return
 
-        self._statusbar_update("Download finished, %s" % self.stats.get_statistics())
+        self._statusbar_update("Download finished, %s" % self.stats.get_download_finished_message())
         for p,d,commits in self.stats.get_projects():
             self.model.append((p,commits,d))
         self.tv.set_model(self.model)
@@ -625,10 +640,7 @@ class UI(threading.Thread):
         gobject.idle_add(self.collect_stats_finished)
 
     def main(self):
-        self._statusbar_update("Downloading %d day%s of development history (%s translations)" % (
-                        self.stats.days,
-                        {True:"s",False:""}[self.stats.days > 1],
-                        self.stats.translations))
+        self._statusbar_update(self.stats.get_download_message())
         self.start()
         gtk.main()
 
