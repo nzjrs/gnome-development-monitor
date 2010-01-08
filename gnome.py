@@ -443,6 +443,8 @@ class Stats:
             i.append([name, freq, ""])
             self.projects.append((name, d, freq))
 
+        #resort by number of commits
+        i.sort(cmp=lambda x,y: cmp(y[1], x[1]))
         for j in i:
             self.c.execute('''
                     SELECT author
