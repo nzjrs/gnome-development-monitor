@@ -294,6 +294,27 @@ class Stats:
         print "COULD NOT DOWNLOAD: %s (%s)" % (url, msg)
         return None
 
+    def _get_archive_url(self, date):
+        #we need to ignore the system locale because the list archive URLS
+        #are in english
+        MONTHS = (
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December")
+
+        return self.LIST_ARCHIVE_URL % ("%s-%s" % (
+                            date.year,
+                            MONTHS[date.month - 1]))
+
     def collect_stats(self):
         if self.filename and os.path.exists(self.filename):
             files = [
@@ -305,7 +326,7 @@ class Stats:
             files = []
 
 
-            filename = self.LIST_ARCHIVE_URL % today.strftime("%Y-%B")
+            filename = self._get_archive_url(today)
             files.append(
                 (self._download_page(filename), filename)
             )
@@ -313,7 +334,7 @@ class Stats:
             #if we are in the first n days of this month, and we require > n days of data
             #then also get the last month
             if today.month != last.month:
-                filename = self.LIST_ARCHIVE_URL % last.strftime("%Y-%B")
+                filename = self._get_archive_url(last)
                 files.append(
                     (self._download_page(filename), filename)
                 )
