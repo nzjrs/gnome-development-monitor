@@ -1,0 +1,6 @@
+Gnome Development Monitor does not support system wide installation yet,
+however it can be installed on a per-user basis direct from the source or
+unpacked tarball. 
+
+To install for the current user, type
+    $ make install
