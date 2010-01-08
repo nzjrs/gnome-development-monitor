@@ -97,7 +97,10 @@ class _HtmlRenderer:
         self.tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
         self.tproc.set("page_name", page_name)
 
-    def render_template(self):
+    def render_variable(self, name, value):
+        self.tproc.set(name, value)
+
+    def render_template(self, *args, **kwargs):
         pass
 
     def render(self):
@@ -112,6 +115,8 @@ class SummaryHtmlRenderer(_HtmlRenderer):
 
     SECTION_PROJECT = "projects"
     SECTION_AUTHOR = "authors"
+    SECTION_TODAY_DATE = "today_date"
+    SECTION_LAST_DATE = "last_date"
 
     def __init__(self):
         _HtmlRenderer.__init__(self, os.path.join(DATADIR,"summary.tmpl"), "GNOME Development Activity Summary")
@@ -279,6 +284,9 @@ class Stats:
         self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
         self.rend = SummaryHtmlRenderer()
 
+        self.todaydate = datetime.date.today()
+        self.lastdate = self.todaydate - datetime.timedelta(days=self.days)
+
     def _download_page(self, url):
         msg = ""
         try:
@@ -321,20 +329,15 @@ class Stats:
                 (open(self.filename, "r"), self.filename)
             ]
         else:
-            today = datetime.date.today()
-            last = today - datetime.timedelta(days=self.days)
-            files = []
-
-
-            filename = self._get_archive_url(today)
-            files.append(
+            filename = self._get_archive_url(self.todaydate)
+            files = [
                 (self._download_page(filename), filename)
-            )
+            ]
 
             #if we are in the first n days of this month, and we require > n days of data
             #then also get the last month
-            if today.month != last.month:
-                filename = self._get_archive_url(last)
+            if self.todaydate.month != self.lastdate.month:
+                filename = self._get_archive_url(self.lastdate)
                 files.append(
                     (self._download_page(filename), filename)
                 )
@@ -456,6 +459,12 @@ class Stats:
                     project_name=name, project_freq=freq, project_authors=projects)
 
     def get_summary(self):
+        self.rend.render_variable(
+                self.rend.SECTION_TODAY_DATE,
+                self.todaydate.strftime("%x"))
+        self.rend.render_variable(
+                self.rend.SECTION_LAST_DATE,
+                self.lastdate.strftime("%x"))
         return self.rend.render()
 
     def get_projects(self):
