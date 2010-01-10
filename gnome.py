@@ -525,7 +525,7 @@ class UI(threading.Thread):
         self.summaryWebkit = webkit.WebView()
         self.summaryWebkit.load_string(
                         loadingtxt,
-                        "text/html", "iso-8859-15", "commits:")
+                        "text/html", "utf-8", "commits:")
         self.builder.get_object("summaryScrolledWindow").add(self.summaryWebkit)
 
         self.sb = self.builder.get_object("statusbar1")
@@ -533,7 +533,7 @@ class UI(threading.Thread):
         self.projectWebkit = webkit.WebView()
         self.projectWebkit.load_string(
                         loadingtxt,
-                        "text/html", "iso-8859-15", "project:")
+                        "text/html", "utf-8", "project:")
         sw.add(self.projectWebkit)
 
         self.model = gtk.ListStore(str,int, object)
@@ -627,7 +627,7 @@ class UI(threading.Thread):
 
         self.summaryWebkit.load_string(
                         self.stats.get_summary(), 
-                        "text/html", "iso-8859-15", "commits:"
+                        "text/html", "utf-8", "commits:"
         )
 
     def run(self):
