@@ -520,6 +520,10 @@ class UI(threading.Thread):
         pg = webkit.WebView()
         pg.open("http://planet.gnome.org")
         self.builder.get_object("planetGnomeScrolledWindow").add(pg)
+        self.builder.get_object("planetGnomeStopButton").connect(
+                        "clicked",
+                        self._stop_planetgnome,
+                        pg)
 
         #setup summary page
         self.summaryWebkit = webkit.WebView()
@@ -556,6 +560,10 @@ class UI(threading.Thread):
 
         w = self.builder.get_object("window1")
         w.show_all()
+
+    def _stop_planetgnome(self, btn, webview):
+        webview.stop_loading()
+        btn.set_sensitive(False)
 
     def _render_date(self, column, cell, model, iter_):
         d = model.get_value(iter_, 2)
