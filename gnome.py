@@ -243,6 +243,8 @@ class Stats:
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
 
+    ALL_PROJECTS_URL = "http://git.gnome.org/repositories.txt"
+
     TRANSLATION_INCLUDE = "include"
     TRANSLATION_EXCLUDE = "exclude"
     TRANSLATION_ONLY = "only"
@@ -251,7 +253,10 @@ class Stats:
     def __init__(self, filename, days, translations):
         self.days = days
         self.filename = filename
+        self.includeall = False
 
+        self.allprojects = {}
+        #projects with activity
         self.projects = []
         #parse stats, (parsed ok, total, num translations)
         self.parse_stats = (0,0,0)
@@ -324,6 +329,12 @@ class Stats:
                             MONTHS[date.month - 1]))
 
     def collect_stats(self):
+        if self.includeall:
+            f = self._download_page(self.ALL_PROJECTS_URL)
+            if f:
+                for l in f.readlines():
+                    self.allprojects[l.strip()] = True
+
         if self.filename and os.path.exists(self.filename):
             files = [
                 (open(self.filename, "r"), self.filename)
@@ -470,7 +481,15 @@ class Stats:
         return self.rend.render()
 
     def get_projects(self):
-        return self.projects
+        projects = self.projects
+        if self.includeall:
+            for name,d,freq in self.projects:
+                try:
+                    del(self.allprojects[name])
+                except KeyError: pass
+            for p in self.allprojects:
+                projects.append((p,None,0))
+        return projects
 
     def got_data(self):
         return self.parse_stats[0] > 0 and len(self.projects) > 0
@@ -567,7 +586,10 @@ class UI(threading.Thread):
 
     def _render_date(self, column, cell, model, iter_):
         d = model.get_value(iter_, 2)
-        cell.props.text = humanize_date_difference(now=self.time_started, otherdate=d)
+        if d:
+            cell.props.text = humanize_date_difference(now=self.time_started, otherdate=d)
+        else:
+            cell.props.text = ""
 
     def _get_details_dict(self):
         today = datetime.date.today()

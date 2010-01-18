@@ -22,7 +22,7 @@
                   <object class="GtkScrolledWindow" id="scrolledwindow2">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">never</property>
+                    <property name="hscrollbar_policy">automatic</property>
                     <child>
                       <object class="GtkTreeView" id="treeview1">
                         <property name="width_request">300</property>
