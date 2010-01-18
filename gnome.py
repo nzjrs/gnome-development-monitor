@@ -250,10 +250,10 @@ class Stats:
     TRANSLATION_ONLY = "only"
     TRANSLATION_CHOICES = (TRANSLATION_INCLUDE,TRANSLATION_EXCLUDE,TRANSLATION_ONLY)
 
-    def __init__(self, filename, days, translations):
+    def __init__(self, filename, days, translations, includeall):
         self.days = days
         self.filename = filename
-        self.includeall = False
+        self.includeall = includeall
 
         self.allprojects = {}
         #projects with activity
@@ -688,10 +688,17 @@ if __name__ == "__main__":
                   metavar="[%s]" % "|".join(Stats.TRANSLATION_CHOICES),
                   default=Stats.TRANSLATION_EXCLUDE,
                   help="include translation commits in analysis [default: %default]")
+    parser.add_option("-a", "--all-projects",
+                  help="include all GNOME projects, not just those with commits",
+                  action="store_true")
 
     options, args = parser.parse_args()
 
-    s = Stats(filename=options.source, days=options.days, translations=options.translations)
+    s = Stats(
+            filename=options.source,
+            days=options.days,
+            translations=options.translations,
+            includeall=options.all_projects)
     ui = UI(s)
     ui.main()
 
