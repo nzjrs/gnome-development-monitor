@@ -292,17 +292,20 @@ class Stats:
         self.todaydate = datetime.date.today()
         self.lastdate = self.todaydate - datetime.timedelta(days=self.days)
 
-    def _download_page(self, url):
+    def _download_page(self, url, tries=5):
+        i = 1
         msg = ""
-        try:
-            print "DOWNLOADING PAGE: %s" % url
-            return urllib2.urlopen(urllib2.Request(url))
-        except urllib2.HTTPError, e:
-            msg = "The server couldn\'t fulfill the request. (error code: %s)" % e.code
-        except urllib2.URLError, e:
-            msg = "We failed to reach a server. (reason: %s)" % e.reason
-        except Exception, e:
-            msg = str(e)            
+        while i <= tries:
+            try:
+                print "DOWNLOADING PAGE: %s (attempt %d)" % (url, i)
+                return urllib2.urlopen(urllib2.Request(url))
+            except urllib2.HTTPError, e:
+                msg = "The server couldn\'t fulfill the request. (error code: %s)" % e.code
+            except urllib2.URLError, e:
+                msg = "We failed to reach a server. (reason: %s)" % e.reason
+            except Exception, e:
+                msg = str(e)
+            i += 1
 
         print "COULD NOT DOWNLOAD: %s (%s)" % (url, msg)
         return None
