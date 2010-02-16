@@ -178,7 +178,7 @@ class SummaryHtmlRenderer(_HtmlRenderer):
 
 class SVNCommitsParser(sgmllib.SGMLParser):
     """
-    Parses svn-commits, looking for strings of the form
+    Parses commits, looking for strings of the form
     <li><a name="01439" href="msg01439.html">gtk+ r21606 - in trunk: . gtk</a>&nbsp;&nbsp;cdywan</li>
     """
     def __init__(self, verbose=0):
@@ -241,7 +241,7 @@ class Stats:
 
     RE_EXP = "^\[([\w+\-/]+)\] (.*)"
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
-    LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/svn-commits-list/%s/date.html"
+    LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/commits-list/%s/date.html"
 
     ALL_PROJECTS_URL = "http://git.gnome.org/repositories.txt"
 
