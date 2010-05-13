@@ -256,8 +256,9 @@ class Stats:
         self.includeall = includeall
 
         self.allprojects = {}
-        #projects with activity
-        self.projects = []
+        #projects with activity,
+        #   name : [(branch_name, date, freq), ...]
+        self.projects = {}
         #parse stats, (parsed ok, total, num translations)
         self.parse_stats = (0,0,0)
 
@@ -396,6 +397,7 @@ class Stats:
                                 (proj, auth, branch, message, date, istranslation))
 
                 except ValueError:
+                    print msg
                     fail.append(msg)
 
             total = parser.get_num_parsed_lines()
@@ -446,16 +448,19 @@ class Stats:
         #       page, and hence more recent commits
         i = []
         self.c.execute('''
-                SELECT project, MAX(d) as "d [timestamp]", COUNT(*) as c
+                SELECT project, branch, MAX(d) as "d [timestamp]", COUNT(*) as c
                 FROM commits 
                 WHERE d >= datetime("now","-%d days") 
                 AND istranslation %s 0 
-                GROUP BY project 
+                GROUP BY project, branch
                 ORDER BY d DESC, ROWID DESC''' % (self.days,self.includetranslations))
-        for name, d, freq in self.c:
-            #print "name: %s\n\tdate %s %s\n\t\tfreq: %s" % (name, d, type(d), freq)
+        for name, branch, d, freq in self.c:
+            print "name: %s (%s)\n\tdate %s\n\t\tfreq: %s" % (name, branch, d, freq)
             i.append([name, freq, ""])
-            self.projects.append((name, d, freq))
+            try:
+                self.projects[name].append((branch, d, freq))
+            except KeyError:
+                self.projects[name] = [(branch, d, freq)]
 
         #resort by number of commits
         i.sort(cmp=lambda x,y: cmp(y[1], x[1]))
@@ -484,6 +489,8 @@ class Stats:
         return self.rend.render()
 
     def get_projects(self):
+        return self.projects
+        #FIXME
         projects = self.projects
         if self.includeall:
             for name,d,freq in self.projects:
@@ -492,7 +499,7 @@ class Stats:
                 except KeyError: pass
             for p in self.allprojects:
                 projects.append((p,None,0))
-        return projects
+        return #projects
 
     def got_data(self):
         return self.parse_stats[0] > 0 and len(self.projects) > 0
@@ -520,7 +527,7 @@ class UI(threading.Thread):
     BTNS = ("commit_btn","changelog_btn","news_btn","new_patches_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
-    LOG_STR = "http://git.gnome.org/cgit/%(project)s/log"
+    LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
     NEW_PATCHES_STR = "https://bugzilla.gnome.org/page.cgi?id=patchreport.html&product=%(escaped_project)s&patch-status=&max_days=%(days)s"
 
     #keep in sync with ui file
@@ -532,6 +539,7 @@ class UI(threading.Thread):
 
         #selected project
         self.project = None
+        self.branch = None
 
         self.builder = _GtkBuilderWrapper(DATADIR, "gnome.ui")
         self.builder.connect_signals(self)
@@ -562,7 +570,7 @@ class UI(threading.Thread):
                         "text/html", "utf-8", "project:")
         sw.add(self.projectWebkit)
 
-        self.model = gtk.ListStore(str,int, object)
+        self.model = gtk.TreeStore(str,int, object)
         self.tv = self.builder.get_object("treeview1")
 
         col = gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0)
@@ -575,13 +583,28 @@ class UI(threading.Thread):
 
         rend = gtk.CellRendererText()
         date = gtk.TreeViewColumn("Last Commit", rend)
+        date.set_sort_column_id(2)
         date.set_cell_data_func(rend, self._render_date)
         self.tv.append_column(date)
+        self.model.set_sort_func(2, self._sort_dates)
 
         self.notebook = self.builder.get_object("notebook1")
 
         w = self.builder.get_object("window1")
         w.show_all()
+
+    def _sort_dates(self, model, iter1, iter2):
+        d1 = model.get_value(iter1, 2)
+        d2 = model.get_value(iter2, 2)
+        if d1 and d2:
+            #newer
+            if d1 > d2:
+                return -1
+            #older
+            elif d2 > d1:
+                return 1
+        #equal
+        return 0
 
     def _stop_planetgnome(self, btn, webview):
         webview.stop_loading()
@@ -600,6 +623,7 @@ class UI(threading.Thread):
 
         return {
             "project":self.project,
+            "branch":self.branch,
             "escaped_project":urllib.quote(self.project),
             "today_date":today.strftime("%Y-%m-%d"),
             "last_date":old.strftime("%Y-%m-%d"),
@@ -620,10 +644,18 @@ class UI(threading.Thread):
     def _get_selected_project(self):
         model,iter_ = self.tv.get_selection().get_selected()
         if model and iter_:
-            self.project = model.get_value(iter_, 0)
+            if model.iter_depth(iter_) == 0:
+                #if header is selected use the master branch
+                self.project = model.get_value(iter_, 0)
+                self.branch = "master"
+            else:
+                #otherwise use the shown branch
+                self.branch = model.get_value(iter_, 0)
+                self.project = model.get_value(model.iter_parent(iter_), 0)
         else:
             self._statusbar_update("Please select a project")
             self.project = None
+            self.branch = None
 
         return self.project
 
@@ -652,8 +684,21 @@ class UI(threading.Thread):
             return
 
         self._statusbar_update("Download finished, %s" % self.stats.get_download_finished_message())
-        for p,d,commits in self.stats.get_projects():
-            self.model.append((p,commits,d))
+
+        projects = self.stats.get_projects()
+        for p in projects:
+            newestdate = datetime.datetime.min
+            totalcommits = 0
+            for branch, d, commits in projects[p]:
+                totalcommits += commits
+                newestdate = max(d, newestdate)
+
+            #add the project summary
+            projiter = self.model.append(None, (p,totalcommits,newestdate))
+            #add the branch summary
+            for branch, d, commits in projects[p]:
+                self.model.append(projiter, (branch,commits,d))
+
         self.tv.set_model(self.model)
         for i in self.BTNS:
             self.builder.get_object(i).set_sensitive(True)
