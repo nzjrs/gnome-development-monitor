@@ -255,6 +255,8 @@ class Stats:
         self.filename = filename
         self.includeall = includeall
 
+        #all the projects on the GNOME git servier, whether they have seen
+        #any commits over the period or not
         self.allprojects = {}
         #projects with activity,
         #   name : [(branch_name, date, freq), ...]
@@ -336,8 +338,7 @@ class Stats:
         if self.includeall:
             f = self._download_page(self.ALL_PROJECTS_URL)
             if f:
-                for l in f.readlines():
-                    self.allprojects[l.strip()] = True
+                self.allprojects = [l.strip() for l in f.readlines()]
 
         if self.filename and os.path.exists(self.filename):
             files = [
@@ -489,17 +490,12 @@ class Stats:
         return self.rend.render()
 
     def get_projects(self):
-        return self.projects
-        #FIXME
         projects = self.projects
         if self.includeall:
-            for name,d,freq in self.projects:
-                try:
-                    del(self.allprojects[name])
-                except KeyError: pass
             for p in self.allprojects:
-                projects.append((p,None,0))
-        return #projects
+                if p not in projects:
+                    projects[p] = []
+        return projects
 
     def got_data(self):
         return self.parse_stats[0] > 0 and len(self.projects) > 0
@@ -587,6 +583,7 @@ class UI(threading.Thread):
         date.set_cell_data_func(rend, self._render_date)
         self.tv.append_column(date)
         self.model.set_sort_func(2, self._sort_dates)
+        self.model.set_sort_column_id(2, gtk.SORT_ASCENDING)
 
         self.notebook = self.builder.get_object("notebook1")
 
@@ -612,10 +609,10 @@ class UI(threading.Thread):
 
     def _render_date(self, column, cell, model, iter_):
         d = model.get_value(iter_, 2)
-        if d:
+        if d != datetime.datetime.min:
             cell.props.text = humanize_date_difference(now=self.time_started, otherdate=d)
         else:
-            cell.props.text = ""
+            cell.props.text = "unknown"
 
     def _get_details_dict(self):
         today = datetime.date.today()
