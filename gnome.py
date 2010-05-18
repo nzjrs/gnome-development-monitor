@@ -381,7 +381,10 @@ class Stats:
                 try:
                     proj, message = n.groups()
                     try:
-                        proj,branch = proj.split("/")
+                        #use maxsplit=1 because some branch names are in the
+                        #form foo/bar, e.g.
+                        #"glib/wip/gapplication"
+                        proj,branch = proj.split("/", 1)
                     except ValueError:
                         branch = "master"
 
@@ -456,7 +459,6 @@ class Stats:
                 GROUP BY project, branch
                 ORDER BY d DESC, ROWID DESC''' % (self.days,self.includetranslations))
         for name, branch, d, freq in self.c:
-            print "name: %s (%s)\n\tdate %s\n\t\tfreq: %s" % (name, branch, d, freq)
             i.append([name, freq, ""])
             try:
                 self.projects[name].append((branch, d, freq))
