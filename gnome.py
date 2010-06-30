@@ -728,7 +728,7 @@ if __name__ == "__main__":
     parser.add_option("-s", "--source",
                   help="read statistics from FILE [default: read from web]", metavar="FILE")
     parser.add_option("-d", "--days",
-                  type="int", default=5,
+                  type="int", default=3,
                   help="the number of days to consider for statistics [default: %default]")
     parser.add_option("-t", "--translations",
                   choices=Stats.TRANSLATION_CHOICES,
