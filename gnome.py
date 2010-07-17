@@ -239,7 +239,7 @@ class SVNCommitsParser(sgmllib.SGMLParser):
 
 class Stats:
 
-    RE_EXP = "^\[([\w+\-/]+)\] (.*)"
+    RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
     LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/commits-list/%s/date.html"
 
@@ -379,7 +379,7 @@ class Stats:
 
                 #break up the message and parse
                 try:
-                    proj, message = n.groups()
+                    proj, series, message = n.groups()
                     try:
                         #use maxsplit=1 because some branch names are in the
                         #form foo/bar, e.g.
