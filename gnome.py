@@ -511,12 +511,19 @@ class Stats:
                         }[self.days > 1])
 
     def get_download_finished_message(self):
-        msg = "matched %d/%d commit messages (%%s %d translations)" % self.parse_stats
+
+        def percentage(n,d):
+            return 100.0 * (float(n)/d)
+
+        nmatch,ntotal,ntrans = self.parse_stats
+        msg = "matched %d/%d commit messages (%.2f%%%%), %%s %d translations (%.2f%%%%)" % (
+            nmatch,ntotal,percentage(nmatch,ntotal),ntrans,percentage(ntrans,ntotal))
+        print msg
         return msg % (
                     {
-                        self.TRANSLATION_INCLUDE:"included",
-                        self.TRANSLATION_EXCLUDE:"excluded",
-                        self.TRANSLATION_ONLY:"only considered"
+                        self.TRANSLATION_INCLUDE:"including",
+                        self.TRANSLATION_EXCLUDE:"excluding",
+                        self.TRANSLATION_ONLY:"only considering"
                     }[self.translations])
 
 
