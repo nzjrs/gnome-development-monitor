@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# SVN Commits Mailing List Parser
+# Commits Mailing List Parser
 # For generating weekly commit digests
 # (c) John Stowers
 # Public Domain
@@ -176,7 +176,7 @@ class SummaryHtmlRenderer(_HtmlRenderer):
         except KeyError:
             return []
 
-class SVNCommitsParser(sgmllib.SGMLParser):
+class CommitsMailParser(sgmllib.SGMLParser):
     """
     Parses commits, looking for strings of the form
     <li><a name="01439" href="msg01439.html">gtk+ r21606 - in trunk: . gtk</a>&nbsp;&nbsp;cdywan</li>
@@ -367,7 +367,7 @@ class Stats:
             data = f.read()
             f.close()
 
-            parser = SVNCommitsParser()
+            parser = CommitsMailParser()
             parser.parse(data)
 
             fail = []
