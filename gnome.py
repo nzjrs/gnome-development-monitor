@@ -237,7 +237,7 @@ class CommitsMailParser(sgmllib.SGMLParser):
     def get_num_parsed_lines(self):
         return len(self.updates)
 
-class Stats:
+class Stats(threading.Thread, gobject.GObject):
 
     RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
@@ -250,7 +250,16 @@ class Stats:
     TRANSLATION_ONLY = "only"
     TRANSLATION_CHOICES = (TRANSLATION_INCLUDE,TRANSLATION_EXCLUDE,TRANSLATION_ONLY)
 
+    __gsignals__ = {
+        "completed": (
+            gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, []),
+    }
+
     def __init__(self, filename, days, translations, includeall):
+
+        threading.Thread.__init__(self)
+        gobject.GObject.__init__(self)
+
         self.days = days
         self.filename = filename
         self.includeall = includeall
@@ -526,10 +535,19 @@ class Stats:
                         self.TRANSLATION_ONLY:"only considering"
                     }[self.translations])
 
+    def run(self):
+        #FIXME: Until we can record the commit time, no need to care about the 
+        #time started, the date will do
+        #self.time_started = datetime.datetime.now()
+        self.time_started = datetime.datetime.fromordinal(datetime.date.today().toordinal())
+        self.collect_stats()
+        self.generate_stats()
 
-class UI(threading.Thread):
+        gobject.idle_add(gobject.GObject.emit,self,"completed")
 
-    BTNS = ("commit_btn","news_btn","new_patches_btn")
+class UI:
+
+    BTNS = ("refresh_btn","commit_btn","news_btn","new_patches_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
@@ -538,9 +556,8 @@ class UI(threading.Thread):
     #keep in sync with ui file
     PROJECT_NOTEBOOK_PAGE = 1
 
-    def __init__(self, stats):
-        threading.Thread.__init__(self)
-        self.stats = stats
+    def __init__(self, options):
+        self.options = options
 
         #selected project
         self.project = None
@@ -677,10 +694,13 @@ class UI(threading.Thread):
         if self._get_selected_project():
             self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
 
+    def on_refresh_btn_clicked(self, *args):
+        self.refresh()
+
     def on_window1_destroy(self, *args):
         gtk.main_quit()
 
-    def collect_stats_finished(self):
+    def collect_stats_finished(self, stats):
         if not self.stats.got_data():
             self._statusbar_update("Download failed")
             return
@@ -710,18 +730,22 @@ class UI(threading.Thread):
                         "text/html", "utf-8", "commits:"
         )
 
-    def run(self):
-        #FIXME: Until we can record the commit time, no need to care about the 
-        #time started, the date will do
-        #self.time_started = datetime.datetime.now()
+    def refresh(self):
+        self.model.clear()
+        for i in self.BTNS:
+            self.builder.get_object(i).set_sensitive(False)
+        self.stats = Stats(
+                        filename=options.source,
+                        days=options.days,
+                        translations=options.translations,
+                        includeall=options.all_projects)
+        self.stats.connect("completed", self.collect_stats_finished)
         self.time_started = datetime.datetime.fromordinal(datetime.date.today().toordinal())
-        self.stats.collect_stats()
-        self.stats.generate_stats()
-        gobject.idle_add(self.collect_stats_finished)
+        self._statusbar_update(self.stats.get_download_message())
+        self.stats.start()
 
     def main(self):
-        self._statusbar_update(self.stats.get_download_message())
-        self.start()
+        self.refresh()
         gtk.main()
 
 if __name__ == "__main__":
@@ -744,12 +768,7 @@ if __name__ == "__main__":
 
     options, args = parser.parse_args()
 
-    s = Stats(
-            filename=options.source,
-            days=options.days,
-            translations=options.translations,
-            includeall=options.all_projects)
-    ui = UI(s)
+    ui = UI(options)
     ui.main()
 
 
