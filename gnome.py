@@ -529,7 +529,7 @@ class Stats:
 
 class UI(threading.Thread):
 
-    BTNS = ("commit_btn","changelog_btn","news_btn","new_patches_btn")
+    BTNS = ("commit_btn","news_btn","new_patches_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
@@ -668,10 +668,6 @@ class UI(threading.Thread):
     def on_commit_btn_clicked(self, *args):
         if self._get_selected_project():
             self._open_project_url(self.LOG_STR % self._get_details_dict())
-
-    def on_changelog_btn_clicked(self, *args):
-        if self._get_selected_project():
-            self._open_project_url(self.CHANGELOG_STR % self._get_details_dict())
 
     def on_news_btn_clicked(self, *args):
         if self._get_selected_project():
