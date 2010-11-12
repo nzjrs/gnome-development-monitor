@@ -69,6 +69,23 @@
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkButton" id="new_bugs_btn">
+                    <property name="label" translatable="yes">New Bugs</property>
+                    <property name="visible">True</property>
+                    <property name="sensitive">False</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="image">bugs_image</property>
+                    <property name="xalign">0</property>
+                    <signal name="clicked" handler="on_new_bugs_btn_clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">3</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkButton" id="news_btn">
                     <property name="label" translatable="yes">NEWS</property>
                     <property name="visible">True</property>
@@ -82,7 +99,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">3</property>
+                    <property name="position">4</property>
                   </packing>
                 </child>
                 <child>
@@ -91,7 +108,7 @@
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="position">4</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
                 <child>
@@ -107,7 +124,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">5</property>
+                    <property name="position">6</property>
                   </packing>
                 </child>
               </object>
@@ -250,5 +267,9 @@
   <object class="GtkImage" id="news_image">
     <property name="visible">True</property>
     <property name="stock">gtk-new</property>
+  </object>
+  <object class="GtkImage" id="bugs_image">
+    <property name="visible">True</property>
+    <property name="stock">gtk-index</property>
   </object>
 </interface>

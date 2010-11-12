@@ -547,11 +547,12 @@ class Stats(threading.Thread, gobject.GObject):
 
 class UI:
 
-    BTNS = ("refresh_btn","commit_btn","news_btn","new_patches_btn")
+    BTNS = ("refresh_btn","commit_btn","news_btn","new_patches_btn","new_bugs_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
     NEW_PATCHES_STR = "https://bugzilla.gnome.org/page.cgi?id=patchreport.html&product=%(escaped_project)s&patch-status=&max_days=%(days)s"
+    NEW_BUGS_STR = "https://bugzilla.gnome.org/buglist.cgi?product=%(escaped_project)s&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&chfield=[Bug creation]&chfieldfrom=%(last_date)s"
 
     #keep in sync with ui file
     PROJECT_NOTEBOOK_PAGE = 1
@@ -693,6 +694,10 @@ class UI:
     def on_new_patches_btn_clicked(self, *args):
         if self._get_selected_project():
             self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
+
+    def on_new_bugs_btn_clicked(self, *args):
+        if self._get_selected_project():
+            self._open_project_url(self.NEW_BUGS_STR % self._get_details_dict())
 
     def on_refresh_btn_clicked(self, *args):
         self.refresh()
