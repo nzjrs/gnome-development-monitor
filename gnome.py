@@ -614,6 +614,9 @@ class UI:
 
         self.notebook = self.builder.get_object("notebook1")
 
+        #make sure the treeview is visible
+        self.builder.get_object("hpaned1").set_position(350)
+
         w = self.builder.get_object("window1")
         w.show_all()
 
