@@ -94,7 +94,7 @@ class _HtmlRenderer:
         #template back to system dirs e.g. /usr/
         self.template = htmltmpl.TemplateManager(precompile=0, debug=0).prepare(template_name)
         self.tproc = htmltmpl.TemplateProcessor()
-        self.tproc.set("date_generated", datetime.date.today().strftime("%Y-%B"))
+        self.tproc.set("date_generated", datetime.datetime.utcnow().strftime("%Y-%B"))
         self.tproc.set("page_name", page_name)
 
     def render_variable(self, name, value):
@@ -306,7 +306,7 @@ class Stats(threading.Thread, gobject.GObject):
         self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
         self.rend = SummaryHtmlRenderer()
 
-        self.todaydate = datetime.date.today()
+        self.todaydate = datetime.datetime.utcnow()
         self.lastdate = self.todaydate - datetime.timedelta(days=self.days)
 
     def _download_page(self, url, tries=5):
@@ -541,10 +541,7 @@ class Stats(threading.Thread, gobject.GObject):
                     }[self.translations])
 
     def run(self):
-        #FIXME: Until we can record the commit time, no need to care about the 
-        #time started, the date will do
-        #self.time_started = datetime.datetime.now()
-        self.time_started = datetime.datetime.fromordinal(datetime.date.today().toordinal())
+        self.time_started = datetime.datetime.utcnow()
         self.collect_stats()
         self.generate_stats()
 
@@ -650,7 +647,7 @@ class UI:
             cell.props.text = "unknown"
 
     def _get_details_dict(self):
-        today = datetime.date.today()
+        today = datetime.datetime.utcnow()
         old = today-datetime.timedelta(days=self.stats.days)
 
         return {
@@ -753,7 +750,7 @@ class UI:
                         translations=options.translations,
                         includeall=options.all_projects)
         self.stats.connect("completed", self.collect_stats_finished)
-        self.time_started = datetime.datetime.fromordinal(datetime.date.today().toordinal())
+        self.time_started = datetime.datetime.utcnow()
         self._statusbar_update(self.stats.get_download_message())
         self.stats.start()
 
