@@ -191,6 +191,7 @@ class CommitsMailParser(sgmllib.SGMLParser):
         self.inside_a_element = 0
         self.inside_li_element = 0
         self.inside_strong_element = 0
+        self.commit_number = 0
 
     def start_li(self, attributes):
         self.inside_li_element = 1
@@ -232,7 +233,11 @@ class CommitsMailParser(sgmllib.SGMLParser):
             elif self.msg in ("Home", "News", "Projects", "Art", "Support", "Development", "Community", "List archives", "Thread", "Author"):
                 pass
             else:
-                self.updates.append( (self.msg, self.author, self.date) )
+                #we dont get the exact time of the commit, so inorder to make sorting etc be
+                #correct, add 1 second to the date for each line parsed on the page (as the
+                #most recent commits are at the bottom of the page)
+                self.updates.append( (self.msg, self.author, self.date + datetime.timedelta(0, self.commit_number)) )
+                self.commit_number += 1
 
     def get_num_parsed_lines(self):
         return len(self.updates)
