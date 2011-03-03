@@ -94,7 +94,8 @@ class _HtmlRenderer:
         #template back to system dirs e.g. /usr/
         self.template = htmltmpl.TemplateManager(precompile=0, debug=0).prepare(template_name)
         self.tproc = htmltmpl.TemplateProcessor()
-        self.tproc.set("date_generated", datetime.datetime.utcnow().strftime("%Y-%B"))
+        #do not use UTC here, this is user displayed, local timezon
+        self.tproc.set("date_generated", datetime.datetime.now().strftime("%Y-%B"))
         self.tproc.set("page_name", page_name)
 
     def render_variable(self, name, value):
@@ -541,10 +542,8 @@ class Stats(threading.Thread, gobject.GObject):
                     }[self.translations])
 
     def run(self):
-        self.time_started = datetime.datetime.utcnow()
         self.collect_stats()
         self.generate_stats()
-
         gobject.idle_add(gobject.GObject.emit,self,"completed")
 
 class UI:
@@ -642,12 +641,12 @@ class UI:
     def _render_date(self, column, cell, model, iter_):
         d = model.get_value(iter_, 2)
         if d != datetime.datetime.min:
-            cell.props.text = humanize_date_difference(now=self.time_started, otherdate=d)
+            cell.props.text = humanize_date_difference(now=self.stats.todaydate, otherdate=d)
         else:
             cell.props.text = "unknown"
 
     def _get_details_dict(self):
-        today = datetime.datetime.utcnow()
+        today = self.stats.todaydate
         old = today-datetime.timedelta(days=self.stats.days)
 
         return {
@@ -750,7 +749,6 @@ class UI:
                         translations=options.translations,
                         includeall=options.all_projects)
         self.stats.connect("completed", self.collect_stats_finished)
-        self.time_started = datetime.datetime.utcnow()
         self._statusbar_update(self.stats.get_download_message())
         self.stats.start()
 
