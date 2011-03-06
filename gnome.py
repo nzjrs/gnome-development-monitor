@@ -18,11 +18,14 @@ import threading
 import htmltmpl
 import pygooglechart
 
-import gobject
-import gtk
-import webkit
+import glib
+from gi.repository import GObject
+from gi.repository import Gdk
+from gi.repository import Gtk
+from gi.repository import WebKit
 
-gtk.gdk.threads_init()
+glib.threads_init()
+Gdk.threads_init()
 
 DATADIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -68,9 +71,9 @@ def humanize_date_difference(now, otherdate=None, offset=None):
     else:
         return "%ds ago" % delta_s
 
-class _GtkBuilderWrapper(gtk.Builder):
+class _GtkBuilderWrapper(Gtk.Builder):
     def __init__(self, *path):
-        gtk.Builder.__init__(self)
+        Gtk.Builder.__init__(self)
         self.add_from_file(os.path.join(*path))
         self._resources = {}
 
@@ -80,7 +83,7 @@ class _GtkBuilderWrapper(gtk.Builder):
 
     def get_object(self, name):
         if name not in self._resources:
-            w = gtk.Builder.get_object(self,name)
+            w = Gtk.Builder.get_object(self,name)
             if not w:
                 raise Exception("Could not find widget: %s" % name)
             self._resources[name] = w
@@ -243,7 +246,7 @@ class CommitsMailParser(sgmllib.SGMLParser):
     def get_num_parsed_lines(self):
         return len(self.updates)
 
-class Stats(threading.Thread, gobject.GObject):
+class Stats(threading.Thread, GObject.GObject):
 
     RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
@@ -258,13 +261,13 @@ class Stats(threading.Thread, gobject.GObject):
 
     __gsignals__ = {
         "completed": (
-            gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, []),
+            GObject.SignalFlags.RUN_LAST, None, []),
     }
 
     def __init__(self, filename, days, translations, includeall):
 
         threading.Thread.__init__(self)
-        gobject.GObject.__init__(self)
+        GObject.GObject.__init__(self)
 
         self.days = days
         self.filename = filename
@@ -544,7 +547,7 @@ class Stats(threading.Thread, gobject.GObject):
     def run(self):
         self.collect_stats()
         self.generate_stats()
-        gobject.idle_add(gobject.GObject.emit,self,"completed")
+        GObject.idle_add(GObject.GObject.emit,self,"completed")
 
 class UI:
 
@@ -571,7 +574,7 @@ class UI:
         loadingtxt = LoadingHtmlRenderer().render()
 
         #setup planet GNOME
-        pg = webkit.WebView()
+        pg = WebKit.WebView()
         pg.open("http://planet.gnome.org")
         self.builder.get_object("planetGnomeScrolledWindow").add(pg)
         self.builder.get_object("planetGnomeStopButton").connect(
@@ -580,7 +583,7 @@ class UI:
                         pg)
 
         #setup summary page
-        self.summaryWebkit = webkit.WebView()
+        self.summaryWebkit = WebKit.WebView()
         self.summaryWebkit.load_string(
                         loadingtxt,
                         "text/html", "utf-8", "commits:")
@@ -588,30 +591,30 @@ class UI:
 
         self.sb = self.builder.get_object("statusbar1")
         sw = self.builder.get_object("projectScrolledWindow")
-        self.projectWebkit = webkit.WebView()
+        self.projectWebkit = WebKit.WebView()
         self.projectWebkit.load_string(
                         loadingtxt,
                         "text/html", "utf-8", "project:")
         sw.add(self.projectWebkit)
 
-        self.model = gtk.TreeStore(str,int, object)
+        self.model = Gtk.TreeStore(str,int, object)
         self.tv = self.builder.get_object("treeview1")
 
-        col = gtk.TreeViewColumn("Project Name", gtk.CellRendererText(), text=0)
+        col = Gtk.TreeViewColumn("Project Name", Gtk.CellRendererText(), text=0)
         col.set_sort_column_id(0)
         self.tv.append_column(col)
 
-        col = gtk.TreeViewColumn("Commits", gtk.CellRendererText(), text=1)
+        col = Gtk.TreeViewColumn("Commits", Gtk.CellRendererText(), text=1)
         col.set_sort_column_id(1)
         self.tv.append_column(col)
 
-        rend = gtk.CellRendererText()
-        date = gtk.TreeViewColumn("Last Commit", rend)
+        rend = Gtk.CellRendererText()
+        date = Gtk.TreeViewColumn("Last Commit", rend)
         date.set_sort_column_id(2)
         date.set_cell_data_func(rend, self._render_date)
         self.tv.append_column(date)
         self.model.set_sort_func(2, self._sort_dates)
-        self.model.set_sort_column_id(2, gtk.SORT_ASCENDING)
+        self.model.set_sort_column_id(2, Gtk.SortType.ASCENDING)
 
         self.notebook = self.builder.get_object("notebook1")
 
@@ -621,7 +624,7 @@ class UI:
         w = self.builder.get_object("window1")
         w.show_all()
 
-    def _sort_dates(self, model, iter1, iter2):
+    def _sort_dates(self, model, iter1, iter2, user_data):
         d1 = model.get_value(iter1, 2)
         d2 = model.get_value(iter2, 2)
         if d1 and d2:
@@ -638,7 +641,7 @@ class UI:
         webview.stop_loading()
         btn.set_sensitive(False)
 
-    def _render_date(self, column, cell, model, iter_):
+    def _render_date(self, column, cell, model, iter_, user_data):
         d = model.get_value(iter_, 2)
         if d != datetime.datetime.min:
             cell.props.text = humanize_date_difference(now=self.stats.todaydate, otherdate=d)
@@ -707,7 +710,7 @@ class UI:
         self.refresh()
 
     def on_window1_destroy(self, *args):
-        gtk.main_quit()
+        Gtk.main_quit()
 
     def collect_stats_finished(self, stats):
         if not self.stats.got_data():
@@ -754,7 +757,7 @@ class UI:
 
     def main(self):
         self.refresh()
-        gtk.main()
+        Gtk.main()
 
 if __name__ == "__main__":
     import optparse
