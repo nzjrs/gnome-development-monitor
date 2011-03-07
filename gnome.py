@@ -247,7 +247,7 @@ class Stats(threading.Thread, gobject.GObject):
 
     RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
-    LIST_ARCHIVE_URL = "http://mail.gnome.org/archives/commits-list/%s/date.html"
+    LIST_ARCHIVE_URL = "https://mail.gnome.org/archives/commits-list/%s/date.html"
 
     ALL_PROJECTS_URL = "http://git.gnome.org/repositories.txt"
 
