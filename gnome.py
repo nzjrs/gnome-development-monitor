@@ -246,7 +246,7 @@ class CommitsMailParser(sgmllib.SGMLParser):
 class Stats(threading.Thread, gobject.GObject):
 
     RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
-    RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
+    RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage|[Dd]amned [Ll]ies|[Hh]indi).*"
     LIST_ARCHIVE_URL = "https://mail.gnome.org/archives/commits-list/%s/date.html"
 
     ALL_PROJECTS_URL = "http://git.gnome.org/repositories.txt"
