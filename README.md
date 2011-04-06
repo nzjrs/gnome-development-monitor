@@ -2,6 +2,8 @@ GNOME Development Monitor
 =========================
 ![Screenshot](http://github.com/nzjrs/gnome-development-monitor/raw/master/screenshot.jpg)
 
+[Screenshot](http://github.com/nzjrs/gnome-development-monitor/raw/master/screenshot.jpg) 
+
 Introduction
 ------------
 GNOME Development Monitor is a simple graphical tool to follow the the development activity of projects hosted on the GNOME infrastructure.
