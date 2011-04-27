@@ -1,7 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
-  <!-- interface-naming-policy project-wide -->
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkImage" id="bugs_image">
+    <property name="visible">True</property>
+    <property name="stock">gtk-index</property>
+  </object>
+  <object class="GtkImage" id="commit_image">
+    <property name="visible">True</property>
+    <property name="stock">gtk-index</property>
+  </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="stock">gtk-info</property>
+  </object>
+  <object class="GtkImage" id="info_image">
+    <property name="visible">True</property>
+    <property name="stock">gtk-info</property>
+  </object>
+  <object class="GtkImage" id="news_image">
+    <property name="visible">True</property>
+    <property name="stock">gtk-new</property>
+  </object>
+  <object class="GtkImage" id="patches_image">
+    <property name="visible">True</property>
+    <property name="stock">gtk-index</property>
+  </object>
   <object class="GtkWindow" id="window1">
     <property name="title" translatable="yes">Gnome Development Monitor</property>
     <property name="default_width">1200</property>
@@ -21,7 +45,6 @@
                   <object class="GtkScrolledWindow" id="scrolledwindow2">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">automatic</property>
                     <child>
                       <object class="GtkTreeView" id="treeview1">
                         <property name="visible">True</property>
@@ -103,12 +126,37 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkHSeparator" id="hseparator1">
+                  <object class="GtkHSeparator" id="hseparator2">
                     <property name="visible">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
                     <property name="position">5</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="summary_btn">
+                    <property name="label" translatable="yes">Development Summary</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="image">info_image</property>
+                    <property name="xalign">0</property>
+                    <signal name="clicked" handler="on_summary_btn_clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">6</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkHSeparator" id="hseparator1">
+                    <property name="visible">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">7</property>
                   </packing>
                 </child>
                 <child>
@@ -124,7 +172,32 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">6</property>
+                    <property name="position">8</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkHSeparator" id="hseparator3">
+                    <property name="visible">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">9</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="pgo_btn">
+                    <property name="label" translatable="yes">Planet GNOME</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="image">image1</property>
+                    <property name="xalign">0</property>
+                    <signal name="clicked" handler="on_pgo_btn_clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">10</property>
                   </packing>
                 </child>
               </object>
@@ -137,16 +210,11 @@
               <object class="GtkNotebook" id="notebook1">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tab_pos">bottom</property>
-                <property name="tab_border">0</property>
-                <property name="tab_hborder">0</property>
-                <property name="tab_vborder">0</property>
+                <property name="show_tabs">False</property>
                 <child>
                   <object class="GtkScrolledWindow" id="planetGnomeScrolledWindow">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">automatic</property>
-                    <property name="vscrollbar_policy">automatic</property>
                     <child>
                       <placeholder/>
                     </child>
@@ -165,22 +233,6 @@
                         <property name="position">0</property>
                       </packing>
                     </child>
-                    <child>
-                      <object class="GtkButton" id="planetGnomeStopButton">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">True</property>
-                        <child>
-                          <object class="GtkImage" id="image1">
-                            <property name="visible">True</property>
-                            <property name="stock">gtk-cancel</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="position">1</property>
-                      </packing>
-                    </child>
                   </object>
                   <packing>
                     <property name="tab_fill">False</property>
@@ -190,8 +242,6 @@
                   <object class="GtkScrolledWindow" id="projectScrolledWindow">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">automatic</property>
-                    <property name="vscrollbar_policy">automatic</property>
                     <child>
                       <placeholder/>
                     </child>
@@ -214,8 +264,6 @@
                   <object class="GtkScrolledWindow" id="summaryScrolledWindow">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">automatic</property>
-                    <property name="vscrollbar_policy">automatic</property>
                     <child>
                       <placeholder/>
                     </child>
@@ -257,21 +305,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkImage" id="commit_image">
-    <property name="visible">True</property>
-    <property name="stock">gtk-index</property>
-  </object>
-  <object class="GtkImage" id="patches_image">
-    <property name="visible">True</property>
-    <property name="stock">gtk-index</property>
-  </object>
-  <object class="GtkImage" id="bugs_image">
-    <property name="visible">True</property>
-    <property name="stock">gtk-index</property>
-  </object>
-  <object class="GtkImage" id="news_image">
-    <property name="visible">True</property>
-    <property name="stock">gtk-new</property>
   </object>
 </interface>

@@ -249,7 +249,7 @@ class CommitsMailParser(sgmllib.SGMLParser):
 class Stats(threading.Thread, GObject.GObject):
 
     RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
-    RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage).*"
+    RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage|[Dd]amned [Ll]ies|[Hh]indi).*"
     LIST_ARCHIVE_URL = "https://mail.gnome.org/archives/commits-list/%s/date.html"
 
     ALL_PROJECTS_URL = "http://git.gnome.org/repositories.txt"
@@ -551,7 +551,7 @@ class Stats(threading.Thread, GObject.GObject):
 
 class UI:
 
-    BTNS = ("refresh_btn","commit_btn","news_btn","new_patches_btn","new_bugs_btn")
+    BTNS = ("refresh_btn","commit_btn","news_btn","new_patches_btn","new_bugs_btn", "summary_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
@@ -559,7 +559,9 @@ class UI:
     NEW_BUGS_STR = "https://bugzilla.gnome.org/buglist.cgi?product=%(escaped_project)s&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&chfield=[Bug creation]&chfieldfrom=%(last_date)s"
 
     #keep in sync with ui file
+    PGO_NOTEBOOK_PAGE = 0
     PROJECT_NOTEBOOK_PAGE = 1
+    SUMMARY_NOTEBOOK_PAGE = 2
 
     def __init__(self, options):
         self.options = options
@@ -577,10 +579,6 @@ class UI:
         pg = WebKit.WebView()
         pg.open("http://planet.gnome.org")
         self.builder.get_object("planetGnomeScrolledWindow").add(pg)
-        self.builder.get_object("planetGnomeStopButton").connect(
-                        "clicked",
-                        self._stop_planetgnome,
-                        pg)
 
         #setup summary page
         self.summaryWebkit = WebKit.WebView()
@@ -689,6 +687,12 @@ class UI:
             self.branch = None
 
         return self.project
+
+    def on_pgo_btn_clicked(self, *args):
+        self.notebook.set_current_page(self.PGO_NOTEBOOK_PAGE)
+
+    def on_summary_btn_clicked(self, *args):
+        self.notebook.set_current_page(self.SUMMARY_NOTEBOOK_PAGE)
 
     def on_commit_btn_clicked(self, *args):
         if self._get_selected_project():
