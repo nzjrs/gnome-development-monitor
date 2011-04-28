@@ -622,6 +622,13 @@ class UI:
         w = self.builder.get_object("window1")
         w.show_all()
 
+        #set up the GtkApplication stuff
+        self.application = Gtk.Application(
+                            application_id="org.johnstowers.GNOMEDevelopmentMonitor",
+                            flags=0)
+        self.application.add_window(w)
+        self.application.connect("activate", self.on_application_activate)
+
     def _sort_dates(self, model, iter1, iter2, user_data):
         d1 = model.get_value(iter1, 2)
         d2 = model.get_value(iter2, 2)
@@ -688,35 +695,7 @@ class UI:
 
         return self.project
 
-    def on_pgo_btn_clicked(self, *args):
-        self.notebook.set_current_page(self.PGO_NOTEBOOK_PAGE)
-
-    def on_summary_btn_clicked(self, *args):
-        self.notebook.set_current_page(self.SUMMARY_NOTEBOOK_PAGE)
-
-    def on_commit_btn_clicked(self, *args):
-        if self._get_selected_project():
-            self._open_project_url(self.LOG_STR % self._get_details_dict())
-
-    def on_news_btn_clicked(self, *args):
-        if self._get_selected_project():
-            self._open_project_url(self.NEWS_STR % self._get_details_dict())
-
-    def on_new_patches_btn_clicked(self, *args):
-        if self._get_selected_project():
-            self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
-
-    def on_new_bugs_btn_clicked(self, *args):
-        if self._get_selected_project():
-            self._open_project_url(self.NEW_BUGS_STR % self._get_details_dict())
-
-    def on_refresh_btn_clicked(self, *args):
-        self.refresh()
-
-    def on_window1_destroy(self, *args):
-        Gtk.main_quit()
-
-    def collect_stats_finished(self, stats):
+    def _collect_stats_finished(self, stats):
         if not self.stats.got_data():
             self._statusbar_update("Download failed")
             return
@@ -746,6 +725,37 @@ class UI:
                         "text/html", "utf-8", "commits:"
         )
 
+    def on_application_activate(self, *args):
+        self.refresh()
+
+    def on_pgo_btn_clicked(self, *args):
+        self.notebook.set_current_page(self.PGO_NOTEBOOK_PAGE)
+
+    def on_summary_btn_clicked(self, *args):
+        self.notebook.set_current_page(self.SUMMARY_NOTEBOOK_PAGE)
+
+    def on_commit_btn_clicked(self, *args):
+        if self._get_selected_project():
+            self._open_project_url(self.LOG_STR % self._get_details_dict())
+
+    def on_news_btn_clicked(self, *args):
+        if self._get_selected_project():
+            self._open_project_url(self.NEWS_STR % self._get_details_dict())
+
+    def on_new_patches_btn_clicked(self, *args):
+        if self._get_selected_project():
+            self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
+
+    def on_new_bugs_btn_clicked(self, *args):
+        if self._get_selected_project():
+            self._open_project_url(self.NEW_BUGS_STR % self._get_details_dict())
+
+    def on_refresh_btn_clicked(self, *args):
+        self.refresh()
+
+    def on_window1_destroy(self, *args):
+        Gtk.main_quit()
+
     def refresh(self):
         self.model.clear()
         for i in self.BTNS:
@@ -755,13 +765,12 @@ class UI:
                         days=options.days,
                         translations=options.translations,
                         includeall=options.all_projects)
-        self.stats.connect("completed", self.collect_stats_finished)
+        self.stats.connect("completed", self._collect_stats_finished)
         self._statusbar_update(self.stats.get_download_message())
         self.stats.start()
 
     def main(self):
-        self.refresh()
-        Gtk.main()
+        self.application.run(None)
 
 if __name__ == "__main__":
     import optparse
