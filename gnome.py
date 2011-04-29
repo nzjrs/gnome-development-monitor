@@ -23,6 +23,7 @@ from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import WebKit
+from gi.repository import Gio
 
 glib.threads_init()
 Gdk.threads_init()
@@ -619,14 +620,14 @@ class UI:
         #make sure the treeview is visible
         self.builder.get_object("hpaned1").set_position(350)
 
-        w = self.builder.get_object("window1")
-        w.show_all()
+        self.window = self.builder.get_object("window1")
+        self.window.show_all()
 
         #set up the GtkApplication stuff
         self.application = Gtk.Application(
-                            application_id="org.johnstowers.GNOMEDevelopmentMonitor",
-                            flags=0)
-        self.application.add_window(w)
+                            application_id="org.johnstowers.GnomeDevelopmentMonitor",
+                            flags=Gio.ApplicationFlags.FLAGS_NONE)
+        self.application.add_window(self.window)
         self.application.connect("activate", self.on_application_activate)
 
     def _sort_dates(self, model, iter1, iter2, user_data):
@@ -754,7 +755,7 @@ class UI:
         self.refresh()
 
     def on_window1_destroy(self, *args):
-        Gtk.main_quit()
+        self.application.remove_window(self.window)
 
     def refresh(self):
         self.model.clear()
