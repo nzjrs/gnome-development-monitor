@@ -4,6 +4,6 @@ Terminal=false
 Name=GNOME Development Monitor
 Comment=GNOME Development Monitor
 Icon=gnome
-Exec=gnome.py
+Exec=gnome-development-monitor
 Categories=GNOME;GTK;Development;Other;
-
+StartupNotify=true

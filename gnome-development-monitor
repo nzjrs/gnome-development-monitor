@@ -578,6 +578,7 @@ class UI:
 
         #setup planet GNOME
         pg = WebKit.WebView()
+        pg.get_settings().props.enable_plugins = False
         pg.open("http://planet.gnome.org")
         self.builder.get_object("planetGnomeScrolledWindow").add(pg)
 
@@ -621,7 +622,6 @@ class UI:
         self.builder.get_object("hpaned1").set_position(350)
 
         self.window = self.builder.get_object("window1")
-        self.window.show_all()
 
         #set up the GtkApplication stuff
         self.application = Gtk.Application(
@@ -727,7 +727,8 @@ class UI:
         )
 
     def on_application_activate(self, *args):
-        self.refresh()
+        GObject.timeout_add(500, self.refresh)
+        self.window.show_all()
 
     def on_pgo_btn_clicked(self, *args):
         self.notebook.set_current_page(self.PGO_NOTEBOOK_PAGE)
@@ -769,6 +770,7 @@ class UI:
         self.stats.connect("completed", self._collect_stats_finished)
         self._statusbar_update(self.stats.get_download_message())
         self.stats.start()
+        return False
 
     def main(self):
         self.application.run(None)
@@ -792,6 +794,8 @@ if __name__ == "__main__":
                   action="store_true")
 
     options, args = parser.parse_args()
+
+    glib.set_prgname("gnome-development-monitor")
 
     ui = UI(options)
     ui.main()
