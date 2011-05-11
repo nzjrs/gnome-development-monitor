@@ -627,7 +627,6 @@ class UI:
         self.application = Gtk.Application(
                             application_id="org.johnstowers.GnomeDevelopmentMonitor",
                             flags=Gio.ApplicationFlags.FLAGS_NONE)
-        self.application.add_window(self.window)
         self.application.connect("activate", self.on_application_activate)
 
     def _sort_dates(self, model, iter1, iter2, user_data):
@@ -727,6 +726,8 @@ class UI:
         )
 
     def on_application_activate(self, *args):
+        if not self.application.get_windows():
+            self.application.add_window(self.window)
         GObject.timeout_add(500, self.refresh)
         self.window.show_all()
 
