@@ -629,6 +629,13 @@ class UI:
                             flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.application.connect("activate", self.on_application_activate)
 
+        #add some GActions
+        actions = Gio.SimpleActionGroup()
+        act_refresh = Gio.SimpleAction(name="refresh")
+        act_refresh.connect("activate", self.on_action_refresh_activate)
+        actions.insert(act_refresh)
+        self.application.set_action_group(actions)
+
     def _sort_dates(self, model, iter1, iter2, user_data):
         d1 = model.get_value(iter1, 2)
         d2 = model.get_value(iter2, 2)
@@ -724,6 +731,9 @@ class UI:
                         self.stats.get_summary(), 
                         "text/html", "utf-8", "commits:"
         )
+
+    def on_action_refresh_activate(self, *args):
+        self.refresh()
 
     def on_application_activate(self, *args):
         if not self.application.get_windows():
