@@ -270,6 +270,13 @@ class Stats(threading.Thread, GObject.GObject):
         threading.Thread.__init__(self)
         GObject.GObject.__init__(self)
 
+        self.r = re.compile(self.RE_EXP)
+        self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
+
+        self.clear(filename, days, translations, includeall)
+
+    def clear(self, filename, days, translations, includeall):
+
         self.days = days
         self.filename = filename
         self.includeall = includeall
@@ -307,8 +314,6 @@ class Stats(threading.Thread, GObject.GObject):
         self.translations = translations
         print "TRANSLATIONS: %s" % self.translations
 
-        self.r = re.compile(self.RE_EXP)
-        self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
         self.rend = SummaryHtmlRenderer()
 
         self.todaydate = datetime.datetime.utcnow()
@@ -431,7 +436,7 @@ class Stats(threading.Thread, GObject.GObject):
             print "PARSING PAGE: %s" % filename
             print "RESULTS: %s" % self.get_download_finished_message().capitalize()
 
-    def generate_stats(self):
+    def _generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
         #get the list of projects/authors per author/project
 
@@ -547,12 +552,12 @@ class Stats(threading.Thread, GObject.GObject):
 
     def run(self):
         self.collect_stats()
-        self.generate_stats()
+        self._generate_stats()
         GObject.idle_add(GObject.GObject.emit,self,"completed")
 
 class UI:
 
-    BTNS = ("refresh_btn","commit_btn","news_btn","new_patches_btn","new_bugs_btn", "summary_btn")
+    BTNS = ("commit_btn","new_patches_btn","new_bugs_btn","summary_btn","refresh_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
@@ -620,6 +625,17 @@ class UI:
 
         #make sure the treeview is visible
         self.builder.get_object("hpaned1").set_position(350)
+
+        #make the buttons look nicer
+        allbtns = self.BTNS + ("pgo_btn",)
+        numbtns = len(allbtns)
+        for i in range(numbtns):
+            sides = Gtk.JunctionSides.NONE
+            if i > 0:
+                sides |= Gtk.JunctionSides.TOP
+            if i < (numbtns - 1):
+                sides |= Gtk.JunctionSides.BOTTOM
+            self.builder.get_object(allbtns[i]).get_style_context().set_junction_sides(sides)
 
         self.window = self.builder.get_object("window1")
 
@@ -750,10 +766,6 @@ class UI:
     def on_commit_btn_clicked(self, *args):
         if self._get_selected_project():
             self._open_project_url(self.LOG_STR % self._get_details_dict())
-
-    def on_news_btn_clicked(self, *args):
-        if self._get_selected_project():
-            self._open_project_url(self.NEWS_STR % self._get_details_dict())
 
     def on_new_patches_btn_clicked(self, *args):
         if self._get_selected_project():

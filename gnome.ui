@@ -1,46 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
-  <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkImage" id="bugs_image">
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="stock">gtk-index</property>
   </object>
   <object class="GtkImage" id="commit_image">
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="stock">gtk-index</property>
   </object>
   <object class="GtkImage" id="image1">
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="stock">gtk-info</property>
   </object>
   <object class="GtkImage" id="info_image">
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="stock">gtk-info</property>
-  </object>
-  <object class="GtkImage" id="news_image">
-    <property name="visible">True</property>
-    <property name="stock">gtk-new</property>
   </object>
   <object class="GtkImage" id="patches_image">
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="stock">gtk-index</property>
   </object>
   <object class="GtkWindow" id="window1">
+    <property name="can_focus">False</property>
     <property name="title" translatable="yes">Gnome Development Monitor</property>
     <property name="default_width">1200</property>
     <property name="default_height">800</property>
-    <signal name="destroy" handler="on_window1_destroy"/>
+    <signal name="destroy" handler="on_window1_destroy" swapped="no"/>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
+        <property name="can_focus">False</property>
         <child>
           <object class="GtkHPaned" id="hpaned1">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <property name="margin_left">2</property>
             <child>
               <object class="GtkVBox" id="vbox2">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <child>
                   <object class="GtkScrolledWindow" id="scrolledwindow2">
                     <property name="visible">True</property>
@@ -50,10 +54,16 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="search_column">0</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection" id="treeview-selection1"/>
+                        </child>
                       </object>
                     </child>
                   </object>
                   <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="padding">2</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
@@ -64,9 +74,10 @@
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="image">commit_image</property>
                     <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_commit_btn_clicked"/>
+                    <signal name="clicked" handler="on_commit_btn_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -81,9 +92,10 @@
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="image">patches_image</property>
                     <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_new_patches_btn_clicked"/>
+                    <signal name="clicked" handler="on_new_patches_btn_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -98,9 +110,10 @@
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="image">bugs_image</property>
                     <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_new_bugs_btn_clicked"/>
+                    <signal name="clicked" handler="on_new_bugs_btn_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -109,28 +122,13 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="news_btn">
-                    <property name="label" translatable="yes">NEWS</property>
-                    <property name="visible">True</property>
-                    <property name="sensitive">False</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="image">news_image</property>
-                    <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_news_btn_clicked"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">4</property>
-                  </packing>
-                </child>
-                <child>
                   <object class="GtkHSeparator" id="hseparator2">
                     <property name="visible">True</property>
+                    <property name="can_focus">False</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
+                    <property name="fill">True</property>
                     <property name="position">5</property>
                   </packing>
                 </child>
@@ -140,9 +138,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="image">info_image</property>
                     <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_summary_btn_clicked"/>
+                    <signal name="clicked" handler="on_summary_btn_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -153,9 +152,11 @@
                 <child>
                   <object class="GtkHSeparator" id="hseparator1">
                     <property name="visible">True</property>
+                    <property name="can_focus">False</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
+                    <property name="fill">True</property>
                     <property name="position">7</property>
                   </packing>
                 </child>
@@ -165,9 +166,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="use_stock">True</property>
                     <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_refresh_btn_clicked"/>
+                    <signal name="clicked" handler="on_refresh_btn_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -178,9 +180,11 @@
                 <child>
                   <object class="GtkHSeparator" id="hseparator3">
                     <property name="visible">True</property>
+                    <property name="can_focus">False</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
+                    <property name="fill">True</property>
                     <property name="position">9</property>
                   </packing>
                 </child>
@@ -190,9 +194,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="image">image1</property>
                     <property name="xalign">0</property>
-                    <signal name="clicked" handler="on_pgo_btn_clicked"/>
+                    <signal name="clicked" handler="on_pgo_btn_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -223,13 +228,17 @@
                 <child type="tab">
                   <object class="GtkHBox" id="hbox2">
                     <property name="visible">True</property>
+                    <property name="can_focus">False</property>
                     <property name="spacing">2</property>
                     <child>
                       <object class="GtkLabel" id="label1">
                         <property name="visible">True</property>
+                        <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Planet GNOME</property>
                       </object>
                       <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
                         <property name="position">0</property>
                       </packing>
                     </child>
@@ -253,6 +262,7 @@
                 <child type="tab">
                   <object class="GtkLabel" id="label2">
                     <property name="visible">True</property>
+                    <property name="can_focus">False</property>
                     <property name="label" translatable="yes">Project Information</property>
                   </object>
                   <packing>
@@ -275,6 +285,7 @@
                 <child type="tab">
                   <object class="GtkLabel" id="label3">
                     <property name="visible">True</property>
+                    <property name="can_focus">False</property>
                     <property name="label" translatable="yes">Development Summary</property>
                   </object>
                   <packing>
@@ -290,16 +301,21 @@
             </child>
           </object>
           <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="padding">2</property>
             <property name="position">0</property>
           </packing>
         </child>
         <child>
           <object class="GtkStatusbar" id="statusbar1">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="spacing">2</property>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">1</property>
           </packing>
         </child>
