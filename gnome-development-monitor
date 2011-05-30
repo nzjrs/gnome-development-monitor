@@ -288,7 +288,7 @@ class Stats(threading.Thread, GObject.GObject):
         #   name : [(branch_name, date, freq), ...]
         self.projects = {}
         #parse stats, (parsed ok, total, num translations)
-        self.parse_stats = (0,0,0)
+        self.parse_stats = [0,0,0]
 
         conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES, check_same_thread=False)
         #don't explode on unknown unicode
@@ -382,8 +382,6 @@ class Stats(threading.Thread, GObject.GObject):
                     (self._download_page(filename), filename)
                 )
 
-
-        numtranslations = 0
         for f, filename in files:
             if not f:
                 continue
@@ -391,50 +389,57 @@ class Stats(threading.Thread, GObject.GObject):
             data = f.read()
             f.close()
 
-            parser = CommitsMailParser()
-            parser.parse(data)
+            self.parse_data(data, filename)
 
-            fail = []
-            for msg, auth, date in parser.updates:
-                n = self.r.match(msg)
-                if not n:
-                    fail.append(msg)
-                    continue
+    def parse_data(self, data, filename):
+        numtranslations = 0
 
-                #break up the message and parse
+        parser = CommitsMailParser()
+        parser.parse(data)
+
+        fail = []
+        for msg, auth, date in parser.updates:
+            n = self.r.match(msg)
+            if not n:
+                fail.append(msg)
+                continue
+
+            #break up the message and parse
+            try:
+                proj, series, message = n.groups()
                 try:
-                    proj, series, message = n.groups()
-                    try:
-                        #use maxsplit=1 because some branch names are in the
-                        #form foo/bar, e.g.
-                        #"glib/wip/gapplication"
-                        proj,branch = proj.split("/", 1)
-                    except ValueError:
-                        branch = "master"
-
-                    #check if this is a translation commit
-                    if self.rt.match(message):
-                        numtranslations += 1
-                        istranslation = 1
-                    else:
-                        istranslation = 0
-
-                    self.c.execute('''INSERT INTO commits 
-                                (project, author, branch, message, d, istranslation) VALUES
-                                (?, ?, ?, ?, ?, ?)''',
-                                (proj, auth, branch, message, date, istranslation))
-
+                    #use maxsplit=1 because some branch names are in the
+                    #form foo/bar, e.g.
+                    #"glib/wip/gapplication"
+                    proj,branch = proj.split("/", 1)
                 except ValueError:
-                    print msg
-                    fail.append(msg)
+                    branch = "master"
 
-            total = parser.get_num_parsed_lines()
-            parsed = total-len(fail)
+                #check if this is a translation commit
+                if self.rt.match(message):
+                    numtranslations += 1
+                    istranslation = 1
+                else:
+                    istranslation = 0
 
-            self.parse_stats = (parsed,total,numtranslations)
+                self.c.execute('''INSERT INTO commits 
+                            (project, author, branch, message, d, istranslation) VALUES
+                            (?, ?, ?, ?, ?, ?)''',
+                            (proj, auth, branch, message, date, istranslation))
 
-            print "PARSING PAGE: %s" % filename
-            print "RESULTS: %s" % self.get_download_finished_message().capitalize()
+            except ValueError:
+                print msg
+                fail.append(msg)
+
+        total = parser.get_num_parsed_lines()
+        parsed = total-len(fail)
+
+        self.parse_stats[0] += parsed
+        self.parse_stats[1] += total
+        self.parse_stats[2] += numtranslations
+
+        print "PARSING PAGE: %s" % filename
+        print "RESULTS: %s" % self.get_download_finished_message().capitalize()
 
     def _generate_stats(self):
         #Do in 2 steps because my SQL foo is not strong enough to
