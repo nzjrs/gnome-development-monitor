@@ -13,7 +13,6 @@ import re
 import os.path
 import dateutil.parser
 import datetime
-import threading
 
 import htmltmpl
 import pygooglechart
@@ -24,9 +23,6 @@ from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import WebKit
 from gi.repository import Gio
-
-glib.threads_init()
-Gdk.threads_init()
 
 DATADIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -247,7 +243,7 @@ class CommitsMailParser(sgmllib.SGMLParser):
     def get_num_parsed_lines(self):
         return len(self.updates)
 
-class Stats(threading.Thread, GObject.GObject):
+class Stats(GObject.GObject):
 
     RE_EXP = "^\[([\w+\-\./]+)(: .*)?\] (.*)"
     RE_TRANSLATION_MESSAGE = ".*([Tt]ranslation|[Tt]ranslations]|[Ll]anguage|[Dd]amned [Ll]ies|[Hh]indi|[Ss]reenshot|LINGUAS|\[l10n\]).*"
@@ -263,12 +259,15 @@ class Stats(threading.Thread, GObject.GObject):
     __gsignals__ = {
         "completed": (
             GObject.SignalFlags.RUN_LAST, None, []),
+        "progress": (
+            GObject.SignalFlags.RUN_LAST, None, []),
     }
 
     def __init__(self, filename, days, translations, includeall):
 
-        threading.Thread.__init__(self)
         GObject.GObject.__init__(self)
+
+        self.canc = Gio.Cancellable()
 
         self.r = re.compile(self.RE_EXP)
         self.rt = re.compile(self.RE_TRANSLATION_MESSAGE)
@@ -280,6 +279,9 @@ class Stats(threading.Thread, GObject.GObject):
         self.days = days
         self.filename = filename
         self.includeall = includeall
+
+        #files to be downloaded
+        self.files = []
 
         #all the projects on the GNOME git servier, whether they have seen
         #any commits over the period or not
@@ -358,40 +360,44 @@ class Stats(threading.Thread, GObject.GObject):
                             date.year,
                             MONTHS[date.month - 1]))
 
+    def _on_dl_finished(self, obj, result, filename):
+        ok,data,etag = obj.load_contents_finish(result)
+        print "DL COMPLETE:", ok, filename
+
+        if ok:
+            if filename == self.ALL_PROJECTS_URL:
+                self.allprojects = [l.strip() for l in data.splitlines()]
+            else:
+                self._parse_data(data, filename)
+
+        self.files.remove(filename)
+
+        if len(self.files) == 0:
+            self._generate_stats()
+
     def collect_stats(self):
         if self.includeall:
-            f = self._download_page(self.ALL_PROJECTS_URL)
-            if f:
-                self.allprojects = [l.strip() for l in f.readlines()]
+            self.files.append(self.ALL_PROJECTS_URL)
 
         if self.filename and os.path.exists(self.filename):
-            files = [
-                (open(self.filename, "r"), self.filename)
-            ]
+            self.files.append(self.filename)
         else:
             filename = self._get_archive_url(self.todaydate)
-            files = [
-                (self._download_page(filename), filename)
-            ]
+            self.files.append(filename)
 
             #if we are in the first n days of this month, and we require > n days of data
             #then also get the last month
             if self.todaydate.month != self.lastdate.month:
                 filename = self._get_archive_url(self.lastdate)
-                files.append(
-                    (self._download_page(filename), filename)
-                )
+                self.files.append(filename)
 
-        for f, filename in files:
-            if not f:
-                continue
+        for filename in self.files:
+            print "QUEUE DL:",filename
+            Gio.file_new_for_uri(filename).load_contents_async(self.canc, self._on_dl_finished, filename)
 
-            data = f.read()
-            f.close()
+        self.emit("progress")
 
-            self.parse_data(data, filename)
-
-    def parse_data(self, data, filename):
+    def _parse_data(self, data, filename):
         numtranslations = 0
 
         parser = CommitsMailParser()
@@ -511,6 +517,8 @@ class Stats(threading.Thread, GObject.GObject):
                     self.rend.SECTION_PROJECT,
                     project_name=name, project_freq=freq, project_authors=projects)
 
+        self.emit("completed")
+
     def get_summary(self):
         self.rend.render_variable(
                 self.rend.SECTION_TODAY_DATE,
@@ -554,11 +562,6 @@ class Stats(threading.Thread, GObject.GObject):
                         self.TRANSLATION_EXCLUDE:"excluding",
                         self.TRANSLATION_ONLY:"only considering"
                     }[self.translations])
-
-    def run(self):
-        self.collect_stats()
-        self._generate_stats()
-        GObject.idle_add(GObject.GObject.emit,self,"completed")
 
 class UI:
 
@@ -627,6 +630,15 @@ class UI:
         self.model.set_sort_column_id(2, Gtk.SortType.ASCENDING)
 
         self.notebook = self.builder.get_object("notebook1")
+
+        #stats parser
+        self.stats = Stats(
+                        filename=self.options.source,
+                        days=self.options.days,
+                        translations=self.options.translations,
+                        includeall=self.options.all_projects)
+        self.stats.connect("completed", self._collect_stats_finished)
+        self.stats.connect("progress", self._collect_stats_progress)
 
         #make sure the treeview is visible
         self.builder.get_object("hpaned1").set_position(350)
@@ -723,6 +735,9 @@ class UI:
 
         return self.project
 
+    def _collect_stats_progress(self, stats):
+        self._statusbar_update(stats.get_download_message())
+
     def _collect_stats_finished(self, stats):
         if not self.stats.got_data():
             self._statusbar_update("Download failed")
@@ -790,14 +805,12 @@ class UI:
         self.model.clear()
         for i in self.BTNS:
             self.builder.get_object(i).set_sensitive(False)
-        self.stats = Stats(
-                        filename=options.source,
-                        days=options.days,
-                        translations=options.translations,
-                        includeall=options.all_projects)
-        self.stats.connect("completed", self._collect_stats_finished)
-        self._statusbar_update(self.stats.get_download_message())
-        self.stats.start()
+        self.stats.clear(
+                    filename=self.options.source,
+                    days=self.options.days,
+                    translations=self.options.translations,
+                    includeall=self.options.all_projects)
+        self.stats.collect_stats()
         return False
 
     def main(self):
