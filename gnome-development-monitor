@@ -361,16 +361,22 @@ class Stats(GObject.GObject):
                             MONTHS[date.month - 1]))
 
     def _on_dl_finished(self, obj, result, filename):
-        ok,data,etag = obj.load_contents_finish(result)
-        print "DL COMPLETE:", ok, filename
+        try:
+            ok,data,etag = obj.load_contents_finish(result)
+            print "DL COMPLETE:", ok, filename
+        except:
+            ok = False
+        finally:
+            if ok:
+                if filename == self.ALL_PROJECTS_URL:
+                    self.allprojects = [l.strip() for l in data.splitlines()]
+                else:
+                    self._parse_data(data, filename)
 
-        if ok:
-            if filename == self.ALL_PROJECTS_URL:
-                self.allprojects = [l.strip() for l in data.splitlines()]
+                self.files.remove(filename)
             else:
-                self._parse_data(data, filename)
-
-        self.files.remove(filename)
+                print "REQUEUE DL:",filename
+                Gio.file_new_for_uri(filename).load_contents_async(self.canc, self._on_dl_finished, filename)
 
         if len(self.files) == 0:
             self._generate_stats()
