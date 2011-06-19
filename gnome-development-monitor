@@ -259,7 +259,7 @@ class Stats(GObject.GObject):
     __gsignals__ = {
         "completed": (
             GObject.SignalFlags.RUN_LAST, None, []),
-        "progress": (
+        "started": (
             GObject.SignalFlags.RUN_LAST, None, []),
     }
 
@@ -401,7 +401,7 @@ class Stats(GObject.GObject):
             print "QUEUE DL:",filename
             Gio.file_new_for_uri(filename).load_contents_async(self.canc, self._on_dl_finished, filename)
 
-        self.emit("progress")
+        self.emit("started")
 
     def _parse_data(self, data, filename):
         numtranslations = 0
@@ -637,6 +637,10 @@ class UI:
 
         self.notebook = self.builder.get_object("notebook1")
 
+        #spinner indicating load progress
+        self.spinner = Gtk.Spinner()
+        self.notebook.set_action_widget(self.spinner, Gtk.PackType.END)
+
         #theme/style
         ctx = self.builder.get_object("project_scrolledwindow").get_style_context()
         ctx.set_junction_sides(Gtk.JunctionSides.BOTTOM)
@@ -652,7 +656,7 @@ class UI:
                         translations=self.options.translations,
                         includeall=self.options.all_projects)
         self.stats.connect("completed", self._collect_stats_finished)
-        self.stats.connect("progress", self._collect_stats_progress)
+        self.stats.connect("started", self._collect_stats_started)
 
         self.window = self.builder.get_object("window1")
 
@@ -735,8 +739,10 @@ class UI:
 
         return self.project
 
-    def _collect_stats_progress(self, stats):
+    def _collect_stats_started(self, stats):
         self._statusbar_update(stats.get_download_message())
+        self.spinner.start()
+        self.spinner.show()
 
     def _collect_stats_finished(self, stats):
         if not self.stats.got_data():
@@ -744,6 +750,8 @@ class UI:
             return
 
         self._statusbar_update("Download finished, %s" % self.stats.get_download_finished_message())
+        self.spinner.stop()
+        self.spinner.hide()
 
         projects = self.stats.get_projects()
         for p in projects:
