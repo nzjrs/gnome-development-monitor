@@ -571,7 +571,7 @@ class Stats(GObject.GObject):
 
 class UI:
 
-    BTNS = ("commit_btn","new_patches_btn","new_bugs_btn","summary_btn","refresh_btn")
+    BTNS = ("commit_btn","new_patches_btn","new_bugs_btn","refresh_btn")
     CHANGELOG_STR = "http://git.gnome.org/browse/%(project)s/tree/ChangeLog"
     NEWS_STR = "http://git.gnome.org/browse/%(project)s/tree/NEWS"
     LOG_STR = "http://git.gnome.org/cgit/%(project)s/log?h=%(branch)s"
@@ -637,6 +637,14 @@ class UI:
 
         self.notebook = self.builder.get_object("notebook1")
 
+        #theme/style
+        ctx = self.builder.get_object("project_scrolledwindow").get_style_context()
+        ctx.set_junction_sides(Gtk.JunctionSides.BOTTOM)
+
+        ctx = self.builder.get_object("project_toolbar").get_style_context()
+        ctx.set_junction_sides(Gtk.JunctionSides.TOP)
+        ctx.add_class("inline-toolbar")
+
         #stats parser
         self.stats = Stats(
                         filename=self.options.source,
@@ -645,20 +653,6 @@ class UI:
                         includeall=self.options.all_projects)
         self.stats.connect("completed", self._collect_stats_finished)
         self.stats.connect("progress", self._collect_stats_progress)
-
-        #make sure the treeview is visible
-        self.builder.get_object("hpaned1").set_position(350)
-
-        #make the buttons look nicer
-        allbtns = self.BTNS + ("pgo_btn",)
-        numbtns = len(allbtns)
-        for i in range(numbtns):
-            sides = Gtk.JunctionSides.NONE
-            if i > 0:
-                sides |= Gtk.JunctionSides.TOP
-            if i < (numbtns - 1):
-                sides |= Gtk.JunctionSides.BOTTOM
-            self.builder.get_object(allbtns[i]).get_style_context().set_junction_sides(sides)
 
         self.window = self.builder.get_object("window1")
 
@@ -782,12 +776,6 @@ class UI:
             self.application.add_window(self.window)
         GObject.timeout_add(500, self.refresh)
         self.window.show_all()
-
-    def on_pgo_btn_clicked(self, *args):
-        self.notebook.set_current_page(self.PGO_NOTEBOOK_PAGE)
-
-    def on_summary_btn_clicked(self, *args):
-        self.notebook.set_current_page(self.SUMMARY_NOTEBOOK_PAGE)
 
     def on_commit_btn_clicked(self, *args):
         if self._get_selected_project():
