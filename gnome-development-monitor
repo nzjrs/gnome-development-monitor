@@ -364,7 +364,8 @@ class Stats(GObject.GObject):
         try:
             ok,data,etag = obj.load_contents_finish(result)
             print "DL COMPLETE:", ok, filename
-        except:
+        except Exception, e:
+            print "DL FAILED:", e
             ok = False
         finally:
             if ok:
@@ -386,7 +387,7 @@ class Stats(GObject.GObject):
             self.files.append(self.ALL_PROJECTS_URL)
 
         if self.filename and os.path.exists(self.filename):
-            self.files.append(self.filename)
+            self.files.append("file://" + os.path.abspath(self.filename))
         else:
             filename = self._get_archive_url(self.todaydate)
             self.files.append(filename)
@@ -639,7 +640,10 @@ class UI:
 
         #spinner indicating load progress
         self.spinner = Gtk.Spinner()
-        self.notebook.set_action_widget(self.spinner, Gtk.PackType.END)
+        a = Gtk.Alignment(xalign=0,right_padding=2)
+        a.add(self.spinner)
+        a.show()
+        self.notebook.set_action_widget(a, Gtk.PackType.END)
 
         #theme/style
         ctx = self.builder.get_object("project_scrolledwindow").get_style_context()
@@ -659,6 +663,16 @@ class UI:
         self.stats.connect("started", self._collect_stats_started)
 
         self.window = self.builder.get_object("window1")
+
+        #ag = Gtk.AccelGroup()
+        #for a in self.builder.get_object("actiongroup1").list_actions():
+        #    print a,a.get_accel_path()
+        #    a.set_accel_group(ag)
+        #self.window.add_accel_group(ag)
+
+        m = Gtk.UIManager()
+        self.window.add_accel_group(m.get_accel_group())
+        m.insert_action_group(self.builder.get_object("actiongroup1"), 0)
 
         #set up the GtkApplication stuff
         self.application = Gtk.Application(
@@ -785,20 +799,17 @@ class UI:
         GObject.timeout_add(500, self.refresh)
         self.window.show_all()
 
-    def on_commit_btn_clicked(self, *args):
+    def on_action_commit_activate(self, *args):
         if self._get_selected_project():
             self._open_project_url(self.LOG_STR % self._get_details_dict())
 
-    def on_new_patches_btn_clicked(self, *args):
+    def on_action_new_patches_activate(self, *args):
         if self._get_selected_project():
             self._open_project_url(self.NEW_PATCHES_STR % self._get_details_dict())
 
-    def on_new_bugs_btn_clicked(self, *args):
+    def on_action_new_bugs_activate(self, *args):
         if self._get_selected_project():
             self._open_project_url(self.NEW_BUGS_STR % self._get_details_dict())
-
-    def on_refresh_btn_clicked(self, *args):
-        self.refresh()
 
     def on_window1_destroy(self, *args):
         self.application.remove_window(self.window)

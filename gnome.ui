@@ -1,6 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkActionGroup" id="actiongroup1">
+    <child>
+      <object class="GtkAction" id="action_commit">
+        <property name="label" translatable="yes">Commit _Log</property>
+        <property name="tooltip" translatable="yes">Commit Log</property>
+        <property name="icon_name">dialog-information</property>
+        <signal name="activate" handler="on_action_commit_activate" swapped="no"/>
+      </object>
+      <accelerator key="l" modifiers="GDK_CONTROL_MASK"/>
+    </child>
+    <child>
+      <object class="GtkAction" id="action_new_patches">
+        <property name="label" translatable="yes">New Patches</property>
+        <property name="tooltip" translatable="yes">New Patches</property>
+        <property name="icon_name">emblem-documents</property>
+        <signal name="activate" handler="on_action_new_patches_activate" swapped="no"/>
+      </object>
+      <accelerator key="p" modifiers="GDK_CONTROL_MASK"/>
+    </child>
+    <child>
+      <object class="GtkAction" id="action_new_bugs">
+        <property name="label" translatable="yes">New Bugs</property>
+        <property name="tooltip" translatable="yes">New Bugs</property>
+        <property name="icon_name">software-update-available</property>
+        <signal name="activate" handler="on_action_new_bugs_activate" swapped="no"/>
+      </object>
+      <accelerator key="b" modifiers="GDK_CONTROL_MASK"/>
+    </child>
+    <child>
+      <object class="GtkAction" id="action_refresh">
+        <property name="label" translatable="yes">Refresh</property>
+        <property name="tooltip" translatable="yes">Refresh</property>
+        <property name="icon_name">view-refresh</property>
+        <signal name="activate" handler="on_action_refresh_activate" swapped="no"/>
+      </object>
+      <accelerator key="F5"/>
+    </child>
+  </object>
   <object class="GtkWindow" id="window1">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Gnome Development Monitor</property>
@@ -55,12 +93,8 @@
                       <object class="GtkToolButton" id="commit_btn">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="tooltip_text" translatable="yes">Commit Log</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="label" translatable="yes">toolbutton1</property>
+                        <property name="related_action">action_commit</property>
                         <property name="use_underline">True</property>
-                        <property name="icon_name">dialog-information</property>
-                        <signal name="clicked" handler="on_commit_btn_clicked" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -71,12 +105,8 @@
                       <object class="GtkToolButton" id="new_patches_btn">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="tooltip_text" translatable="yes">New Patches</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="label" translatable="yes">toolbutton2</property>
+                        <property name="related_action">action_new_patches</property>
                         <property name="use_underline">True</property>
-                        <property name="icon_name">emblem-documents</property>
-                        <signal name="clicked" handler="on_new_patches_btn_clicked" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -88,11 +118,8 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="tooltip_text" translatable="yes">New Bugs</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="label" translatable="yes">toolbutton3</property>
+                        <property name="related_action">action_new_bugs</property>
                         <property name="use_underline">True</property>
-                        <property name="icon_name">software-update-available</property>
-                        <signal name="clicked" handler="on_new_bugs_btn_clicked" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -115,11 +142,8 @@
                       <object class="GtkToolButton" id="refresh_btn">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="label" translatable="yes">toolbutton2</property>
+                        <property name="related_action">action_refresh</property>
                         <property name="use_underline">True</property>
-                        <property name="icon_name">view-refresh</property>
-                        <signal name="clicked" handler="on_refresh_btn_clicked" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
